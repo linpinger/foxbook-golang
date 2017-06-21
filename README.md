@@ -19,6 +19,11 @@
 **依赖:**
 - https://github.com/axgle/mahonia
 
+**已编译好的下载地址:**
+- 已编译的不一定是最新的，谁叫我懒呢，里面目前有win 32/64位，linux x86旧版编译成功不过没放进来
+- 七牛(速度快，就是每月有流量限制): http://linpinger.qiniudn.com/prj/foxbook-golang-bin.zip
+- SF(慢，好像没有限制): http://master.dl.sourceforge.net/project/foxtestphp/prj/foxbook-golang-bin.zip
+
 **编译:**
 - 下载go: https://golang.org/dl/
 - 配置好 GOPATH
@@ -48,8 +53,10 @@
   - http://127.0.0.1/fb/ 可以看到小说页面，如果当前目录存在 FoxBook.fml
   - http://127.0.0.1/f 这是上传文件的页面
   - http://127.0.0.1/foxcgi/xxx.exe  CGI程序(当前目录下存在 foxcgi/xxx.exe, xxx.exe是一个cgi程序，可以用AHK_L版脚本来写)
-- 其他文件名，打开http://127.0.0.1/就可以看到小说页面，如果当前目录存在 FoxBook.fml
+- 其他文件名，打开 http://127.0.0.1/ 就可以看到小说页面，如果当前目录存在 FoxBook.fml
+- foxbook-golang-x86.exe -h 可以查看命令行参数
 
 **更新日志:**
 - 2017-06-21: 发布第一个版本，路径让人懒得上传
 - ...: 懒得写了，就这样吧
+
