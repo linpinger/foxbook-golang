@@ -22,6 +22,7 @@ var CookiePath string = ""
 var PosDirList []string
 var fp = fmt.Fprint
 var fpf = fmt.Fprintf
+// var spf = fmt.Sprintf
 
 func FoxHTTPVarInit(fmlPath, cookieFilePath string, posibleDirList []string) { // 全局变量初始化
 	ShelfPath = fmlPath
@@ -55,6 +56,7 @@ func lsDirFML(dirName string) []string {
 }
 
 func getShelfListHtml() string {
+	nowUnixTime := time.Now().Unix()
 	nowShelfName := filepath.Base(ShelfPath)
 	html := ""
 	for _, nowDir := range PosDirList {
@@ -65,7 +67,7 @@ func getShelfListHtml() string {
 				if nowFML == nowShelfName {
 					html += " <b>" + nowFML + "</b>"
 				} else {
-					html += " <a href=\"?a=fswitchsh&f=" + nowDir + nowFML + "\">" + nowFML + "</a>"
+					html += spf(" <a href=\"?a=fswitchsh&f=%s%s&t=%d\">%s</a>", nowDir, nowFML, nowUnixTime, nowFML)
 				}
 			}
 			html += "<br>\n"
@@ -238,11 +240,12 @@ func FoxBookServer(w http.ResponseWriter, r *http.Request) {
 		fp(w, "\t<title>Shelf</title>\n\t<style>\n" , StyleLI , StyleYY , "\t</style>\n" , HtmlHeadBodyC)
 
 		fp(w, getShelfListHtml())
-		fp(w, "<br>　" + filepath.Base(ShelfPath) + ": <a class=\"yy\" href=\"?a=fups\">更新Shelf</a>　　<a class=\"yy\" href=\"?a=fla\">显示所有章节</a>　　<a class=\"yy\" href=\"?a=ftop\">转Epub</a>　<a class=\"yy\" href=\"?a=ftom\">转Mobi</a>　　<a class=\"yy\" href=\"?a=fsavesh\">保存</a><br>\n")
+		nowUnixTime := time.Now().Unix()
+		fpf(w, "<br>　%s: <a class=\"yy\" href=\"?a=fups&t=%d\">更新Shelf</a>　　<a class=\"yy\" href=\"?a=fla&t=%d\">显示所有章节</a>　　<a class=\"yy\" href=\"?a=ftop&t=%d\">转Epub</a>　<a class=\"yy\" href=\"?a=ftom&t=%d\">转Mobi</a>　　<a class=\"yy\" href=\"?a=fsavesh&t=%d\">保存</a><br>\n", filepath.Base(ShelfPath), nowUnixTime, nowUnixTime, nowUnixTime, nowUnixTime, nowUnixTime)
 
 		fp(w, "<ol>\n")
 		for i, book := range Shelf {
-			fpf(w, "\t<li><a href=\"?a=flb&b=%d\">%s</a> (%d) <a class=\"yy\" href=\"?a=fcb&b=%d\">清空本书</a></li>\n", i, book.bookname, len(book.chapters), i )
+			fpf(w, "\t<li><a href=\"?a=flb&b=%d\">%s</a> (%d) <a class=\"yy\" href=\"?a=fcb&b=%d&t=%d\">清空本书</a></li>\n", i, book.bookname, len(book.chapters), i, nowUnixTime )
 		}
 		fp(w, "</ol>\n")
 

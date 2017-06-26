@@ -38,7 +38,7 @@ func main() {
 	flag.Parse()
 
 	if bVersion {
-		p( "Version:  2017-6-14" )
+		p( "Version:  2017-6-25" )
 		p( "Compiler: go version go1.8.3 windows/386" )
 		p( "Usage:   ", os.Args[0], "[args] [fmlPath]" )
 		if isBinNameHTTP {
