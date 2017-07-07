@@ -9,6 +9,12 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"bytes"
+	"os"
+	"io"
+	"mime/multipart"
+	"path/filepath"
 )
 
 // var p = fmt.Println
@@ -88,8 +94,46 @@ func html2utf8(html []byte, inURL string) string {
 	return string(html)
 }
 
+func PostFile(filePath string, postURL string) string {
+	fileName := mahonia.NewEncoder("gb18030").ConvertString( filepath.Base(filePath) ) // 文件名使用GBK编码发送，与curl保持一致
+
+	buf := new(bytes.Buffer) // dont use this for large files
+	w := multipart.NewWriter(buf)
+	fw, err := w.CreateFormFile("f", fileName)
+	if err != nil {
+		p("CreateFormFile Error: ", err)
+	}
+	fd, err := os.Open(filePath)
+	if err != nil {
+		p("Post Open File Error: ", err)
+	}
+	defer fd.Close()
+	_, err = io.Copy(fw, fd)
+	if err != nil {
+		p("Post Copy File Error: ", err)
+	}
+	w.Close()
+
+	req, err := http.NewRequest("POST", postURL, buf)
+	if err != nil {
+		p("Post NewRequest Error: ", err)
+	}
+	req.Header.Set("Content-Type", w.FormDataContentType())
+
+	var client http.Client
+	res, err := client.Do(req)
+	if err != nil {
+		p("Post Error: ", err)
+	}
+	defer res.Body.Close()
+	bys, _ := ioutil.ReadAll(res.Body)
+	return string(bys)
+}
+
 /*
 func main() {
+	p( PostFile("c:/bin/AutoHotkey/AutoHotkey.exe", "http://127.0.0.1/f") )
+
 //	bb := gethtml("http://www.dajiadu.net/modules/article/bookcase.php", "")
 	bb, _ := ioutil.ReadFile("a.html")
 	p( html2utf8(bb, "") )

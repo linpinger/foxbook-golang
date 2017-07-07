@@ -19,7 +19,7 @@
 **依赖:** https://github.com/axgle/mahonia
 
 **预编译版的下载地址:**
-- 已编译的不一定是最新的，谁叫我懒呢，目前包含win 32/64位，linux x86位，MacOSX x64位
+- 已编译的不一定是最新的，谁叫我懒呢，可使用-v参数查看版本，需与更新日志日期一致才是最新版，目前包含win 32/64位，linux x86/x64位，MacOSX x64位
 - 七牛(速度快，就是每月有流量限制): http://linpinger.qiniudn.com/prj/foxbook-golang-bin.zip
 - SF(慢，好像没有限制): http://master.dl.sourceforge.net/project/foxtestphp/prj/foxbook-golang-bin.zip
 
@@ -57,6 +57,7 @@
 - 如果是服务器模式，默认跟目录为当前目录，默认端口为80(linux/mac下因权限问题需使用-p参数修改一下端口)
 
 **更新日志:**
+- 2017-07-07: 添加: pu参数来使用POST发送文件，若是中文文件名，会发送GBK编码的文件名哦，可以使用本程序来接收，是配套的
 - 2017-06-25: 服务器网页命令链接后加入t参数，避免在firefox中不处理相同url的问题
 - 2017-06-21: 发布第一个版本，路径让人懒得上传
 - ...: 懒得写了，就这样吧

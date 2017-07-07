@@ -21,7 +21,8 @@ func main() {
 	nowExeName := filepath.Base(os.Args[0])
 	if "http" == nowExeName || "http.exe" == nowExeName { isBinNameHTTP = true }
 
-	var fmlPath, cookiePath string
+	var fmlPath, cookiePath, postURL string
+	flag.StringVar(&postURL, "pu", "http://127.0.0.0/f", "POST URL used to post a File")
 	flag.StringVar(&cookiePath, "c", "FoxBook.cookie", "cookie file Path, if blank then not download bookcase")
 	var bServer, bVersion bool
 	var listenPort, httpRootDir string
@@ -38,7 +39,7 @@ func main() {
 	flag.Parse()
 
 	if bVersion {
-		p( "Version:  2017-6-25" )
+		p( "Version:  2017-7-7" )
 		p( "Compiler: go version go1.8.3 windows/386" )
 		p( "Usage:   ", os.Args[0], "[args] [fmlPath]" )
 		if isBinNameHTTP {
@@ -106,6 +107,15 @@ func main() {
 		if ! foxbook.FileExist(cookiePath) {
 			cookiePath = ""
 		}
+	}
+
+	// Start
+
+	if "http://127.0.0.0/f" != postURL { // 发送文件
+		if foxbook.FileExist(fmlPath) {
+			p( foxbook.PostFile(fmlPath, postURL) )
+		}
+		os.Exit(0)
 	}
 
 	if bServer || isBinNameHTTP { // 服务器
