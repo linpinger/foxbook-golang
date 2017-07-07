@@ -351,6 +351,7 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 	p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
 	if "POST" == r.Method {
 		p("- New File Uploading From: " + r.RemoteAddr)
+		r.ParseMultipartForm(99 << 20) // 这里设置为99M，如果文件大小大于99M会出现异常，默认BODY内存大小 32 MB
 		file, ffh, err := r.FormFile("f")
 		fenc := r.FormValue("e")
 
@@ -359,9 +360,9 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 			newName = ffh.Filename
 		} else { // 最大可能是 curl 上传的
 			// 文件名 xx[1]: GBK -> UTF-8
-			enc := mahonia.NewDecoder("gb18030")
 			re := regexp.MustCompile("filename=\"(.*)\"")
-			newName = re.FindStringSubmatch(enc.ConvertString(ffh.Header.Get("Content-Disposition")))[1] // < form-data; name="f"; filename="Nod32制作离线包_V2.2.ahk" >
+			newName = re.FindStringSubmatch( mahonia.NewDecoder("gb18030").ConvertString( ffh.Header.Get("Content-Disposition") ) )[1]
+			newName = filepath.Base(newName) // 如果包含路径，只取文件名
 		}
 
 		p("- Name:", newName)
@@ -399,7 +400,7 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 
 <p></p>
 <hr>
-Curl Upload Example:<br/>
+Curl Upload Example(File Size Limit: 99M):<br/>
 curl http://127.0.0.1:55555/f -F f=@"hello.txt"
 
 </body>

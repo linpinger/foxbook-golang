@@ -13,8 +13,9 @@ import (
 	"bytes"
 	"os"
 	"io"
-	"mime/multipart"
 	"path/filepath"
+	"crypto/rand"
+	"fmt"
 )
 
 // var p = fmt.Println
@@ -94,36 +95,54 @@ func html2utf8(html []byte, inURL string) string {
 	return string(html)
 }
 
-func PostFile(filePath string, postURL string) string {
+func randomBoundary() string { // src 里面生成随机字符串的函数，修改一下
+	var buf [6]byte
+	_, err := io.ReadFull(rand.Reader, buf[:])
+	if err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("----------------------------%x", buf[:])
+}
+
+func PostFile(filePath string, postURL string) string { // http://www.golangnote.com/topic/124.html
 	fileName := mahonia.NewEncoder("gb18030").ConvertString( filepath.Base(filePath) ) // 文件名使用GBK编码发送，与curl保持一致
+	boundary := randomBoundary()
 
-	buf := new(bytes.Buffer) // dont use this for large files
-	w := multipart.NewWriter(buf)
-	fw, err := w.CreateFormFile("f", fileName)
-	if err != nil {
-		p("CreateFormFile Error: ", err)
-	}
-	fd, err := os.Open(filePath)
-	if err != nil {
-		p("Post Open File Error: ", err)
-	}
-	defer fd.Close()
-	_, err = io.Copy(fw, fd)
-	if err != nil {
-		p("Post Copy File Error: ", err)
-	}
-	w.Close()
+	// 头 脚
+	body_buf  := bytes.NewBufferString( fmt.Sprintf("--%s\r\nContent-Disposition: form-data; name=\"f\"; filename=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", boundary, fileName) )
+	close_buf := bytes.NewBufferString(fmt.Sprintf("\r\n--%s--\r\n", boundary))
 
-	req, err := http.NewRequest("POST", postURL, buf)
+	// 文件
+	fh, err := os.Open(filePath)
 	if err != nil {
-		p("Post NewRequest Error: ", err)
+		p("POST Open File Error: ", err)
+		return ""
 	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	fi, err := fh.Stat()
+	if err != nil {
+		p("POST Get File Stat Error: ", err)
+		return ""
+	}
 
-	var client http.Client
+	// 连接输入
+	request_reader := io.MultiReader(body_buf, fh, close_buf)
+
+	// 构造HTTP请求
+	req, err := http.NewRequest("POST", postURL, request_reader)
+	if err != nil {
+		p("POST NewRequest Error: ", err)
+		return ""
+	}
+
+	// HTTP 头
+	req.Header.Add("Content-Type", "multipart/form-data; boundary=" + boundary)
+	req.ContentLength = fi.Size() + int64(body_buf.Len()) + int64(close_buf.Len())
+
+	client := &http.Client{Timeout: 5 * time.Second}
 	res, err := client.Do(req)
 	if err != nil {
 		p("Post Error: ", err)
+		return ""
 	}
 	defer res.Body.Close()
 	bys, _ := ioutil.ReadAll(res.Body)
