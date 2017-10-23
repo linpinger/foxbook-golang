@@ -40,10 +40,8 @@
 	- 打开 https://github.com/linpinger/foxbook-golang  点击Download ZIP 按钮
 	- 解压到工作目录，确保路径是这样的 D:\prj\src\github.com\linpinger\foxbook-golang\README.md
   - 如果存在git
-    - go get github.com/axgle/mahonia
     - go get github.com/linpinger/foxbook-golang
 
-- 编译: go build github.com/linpinger/foxbook-golang
 - 最小编译: go build -ldflags "-s -w" github.com/linpinger/foxbook-golang
 
 **小提示:**
@@ -57,6 +55,7 @@
 - 如果是服务器模式，默认跟目录为当前目录，默认端口为80(linux/mac下因权限问题需使用-p参数修改一下端口)
 
 **更新日志:**
+- 2017-10-23: 添加: wutuxs.com的书架，一些bug的修复
 - 2017-07-07: 添加: pu参数来使用POST发送文件，若是中文文件名，会发送GBK编码的文件名哦，可以使用本程序来接收(文件大小在99M以下)，是配套的
 - 2017-06-25: 服务器网页命令链接后加入t参数，避免在firefox中不处理相同url的问题
 - 2017-06-21: 发布第一个版本，路径让人懒得上传

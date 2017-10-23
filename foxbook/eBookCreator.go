@@ -88,7 +88,7 @@ func (bk *EBook) createIndexHTM() { // 生成索引页
 	htmlPath := spf("%s/%s.htm", bk.TmpDir, bk.DefNameNoExt)
 
 	var buf bytes.Buffer
-	buf.WriteString( spf("<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"zh-CN\">\n<head>\n\t<title>%s<title>\n\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n\t<style type=\"text/css\">h2,h3,h4{text-align:center;}</style>\n</head>\n<body>\n<h2>%s</h2>\n<div class=\"toc\">\n\n\n", bk.BookName, bk.BookName) )
+	buf.WriteString( spf("<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"zh-CN\">\n<head>\n\t<title>%s</title>\n\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n\t<style type=\"text/css\">h2,h3,h4{text-align:center;}</style>\n</head>\n<body>\n<h2>%s</h2>\n<div class=\"toc\">\n\n\n", bk.BookName, bk.BookName) )
 
 	for _, it := range bk.Chapters {
 		buf.WriteString( spf("<div><a href=\"html/%d.html\">%s</a></div>\n", it.ID, it.Title) )

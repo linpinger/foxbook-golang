@@ -125,13 +125,19 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 	cookie := getCookie(cookiePath)
 	switch true {  // RE 只要获取 bookname, newpageurl 即可比较
 		case strings.Contains(firstBookURL, ".biquge.com") :
-			html = html2utf8( gethtml( "http://www.biquge.com.tw/modules/article/bookcase.php", cookie2Field( cookie["biquge"] ) ), "http://www.biquge.com.tw/modules/article/bookcase.php")
+//			html = html2utf8( gethtml( "http://www.biquge.com.tw/modules/article/bookcase.php", cookie2Field( cookie["biquge"] ) ), "http://www.biquge.com.tw/modules/article/bookcase.php")
+			html = html2utf8( gethtml( "http://www.biquzi.com/modules/article/bookcase.php", strings.Trim( cookie["rawbiquge"], "\n\r " ) ), "http://www.biquzi.com/modules/article/bookcase.php")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"([^\"]*)\""
 			siteNum = 20
 		case strings.Contains(firstBookURL, ".dajiadu.net") :
 			html = html2utf8( gethtml( "http://www.dajiadu.net/modules/article/bookcase.php", cookie2Field( cookie["dajiadu"] ) ), "http://www.dajiadu.net/modules/article/bookcase.php")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
 			siteNum = 40
+		case strings.Contains(firstBookURL, ".wutuxs.com") :
+			html = html2utf8( gethtml( "http://www.wutuxs.com/modules/article/bookcase.php", strings.Trim(cookie["rawwutuxs"], "\n\r ") ), "http://www.wutuxs.com/modules/article/bookcase.php")
+			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
+			siteNum = 42
+//			p("len html: ", len(html))
 		case strings.Contains(firstBookURL, ".piaotian.") :
 			html = html2utf8( gethtml( "http://www.piaotian.com/modules/article/bookcase.php", cookie2Field( cookie["piaotian"] ) ), "http://www.piaotian.com/modules/article/bookcase.php")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
@@ -172,6 +178,8 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 				newpageurl = lk[2]
 				switch siteNum {
 					case 40:
+						newpageurl += ".html"
+					case 42:
 						newpageurl += ".html"
 					case 16:
 						newpageurl += ".html"

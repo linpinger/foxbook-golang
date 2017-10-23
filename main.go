@@ -39,8 +39,9 @@ func main() {
 	flag.Parse()
 
 	if bVersion {
-		p( "Version:  2017-7-7" )
-		p( "Compiler: go version go1.8.3 windows/386" )
+		p( "Version:  2017-10-23" )
+//		p( "Compiler: go version go1.8.3 windows/386" )
+		p( "Compiler: go version go1.9.1 linux/amd64" )
 		p( "Usage:   ", os.Args[0], "[args] [fmlPath]" )
 		if isBinNameHTTP {
 			p("          Now in HTTP Mod, No Use of CMD Functions: update, toEbook , But YouCan Do That in Browser /fb/, Or Rename This Bin to fb.exe")
@@ -64,6 +65,8 @@ func main() {
 			fmlPath = "piaotian.fml"
 		} else if "qd" == flag.Arg(0) {
 			fmlPath = "qidian.fml"
+		} else if "wt" == flag.Arg(0) {
+			fmlPath = "wutuxs.fml"
 		} else if "fb" == flag.Arg(0) {
 			fmlPath = "FoxBook.fml"
 		} else {
@@ -75,7 +78,7 @@ func main() {
 	}
 
 	// 查找fml,cookie路径
-	posDirList := []string {"./", "/dev/shm/00/", "/dev/shm/00/foxcgi/", "/dev/shm/00/cgi-bin/"} // 非win的路径，以后可以增加
+	posDirList := []string {"./", "/home/fox/bin/", "/dev/shm/00/", "/dev/shm/00/foxcgi/", "/dev/shm/00/cgi-bin/"} // 非win的路径，以后可以增加
 	if "windows" == runtime.GOOS {
 		posDirList = []string {"./", "C:/bin/sqlite/FoxBook/", "D:/bin/sqlite/FoxBook/", "C:/bin/sqlite/more_FML/", "D:/bin/sqlite/more_FML/"}
 	}
