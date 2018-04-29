@@ -88,7 +88,7 @@ type PageLoc struct {
 }
 
 func getAllBlankPages(shelf []Book, onlyNew bool) []PageLoc {
-	contentSize := 3000 
+	contentSize := 3000
 	if onlyNew {
 		contentSize = 1
 	}
@@ -125,8 +125,7 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 	cookie := getCookie(cookiePath)
 	switch true {  // RE 只要获取 bookname, newpageurl 即可比较
 		case strings.Contains(firstBookURL, ".biquge.com") :
-//			html = html2utf8( gethtml( "http://www.biquge.com.tw/modules/article/bookcase.php", cookie2Field( cookie["biquge"] ) ), "http://www.biquge.com.tw/modules/article/bookcase.php")
-			html = html2utf8( gethtml( "http://www.biquzi.com/modules/article/bookcase.php", strings.Trim( cookie["rawbiquge"], "\n\r " ) ), "http://www.biquzi.com/modules/article/bookcase.php")
+			html = html2utf8( gethtml( "http://www.biquge.com.tw/modules/article/bookcase.php", strings.Trim( cookie["rawbiquge"], "\n\r " ) ), "http://www.biquge.com.tw/modules/article/bookcase.php")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"([^\"]*)\""
 			siteNum = 20
 		case strings.Contains(firstBookURL, ".dajiadu.net") :
@@ -225,7 +224,7 @@ func UpdateShelf(fmlPath string, cookiePath string) { // 导出函数，更新sh
 	} else {
 		idxs = getAllBookIDX(shelf) // 获取所有需更新的bookIDX
 	}
-	p("  up idxs =", idxs)
+	p("  up idxs =", idxs, "@", fmlName)
 	p("")
 	if 0 == len(idxs) {
 		p("# End of Update Shelf:", fmlName)
@@ -250,7 +249,7 @@ func UpdateShelf(fmlPath string, cookiePath string) { // 导出函数，更新sh
 	var nowFullURL string
 	for _, pl := range blankPages {
 		nowFullURL = getFullURL(string(shelf[pl.bookIDX].chapters[pl.pageIDX].pageurl), string(shelf[pl.bookIDX].bookurl))
-		p("  + ", string(shelf[pl.bookIDX].chapters[pl.pageIDX].pagename), " @ ", string(shelf[pl.bookIDX].bookname) )
+		p("  + ", string(shelf[pl.bookIDX].chapters[pl.pageIDX].pagename), " @ ", string(shelf[pl.bookIDX].bookname), " @ ", fmlName )
 		wgp.Add(1)
 		go func(inURL string, page *Page) {
 			defer wgp.Done()
@@ -279,6 +278,8 @@ func ExportEBook(ebookPath string, fmlPath string, bookIDX int) { // 导出函�
 	if oBookName == "FoxBook" { oBookName = "biquge" } // todo 按需修改
 	if bookIDX < 0 { // 所有书
 		oBookName = "all_" + oBookName
+		if "automobi" == ebookPath { ebookPath = filepath.Dir(fmlPath) + "/" + oBookName + ".mobi" }
+		if "autoepub" == ebookPath { ebookPath = filepath.Dir(fmlPath) + "/" + oBookName + ".epub" }
 	} else {
 		oBookName = string(shelf[bookIDX].bookname)
 	}

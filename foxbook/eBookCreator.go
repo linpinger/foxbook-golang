@@ -180,6 +180,10 @@ func (bk *EBook) createEpubMiscFiles() { // 生成 epub 必须文件 mimetype, c
 }
 
 func (bk *EBook) SaveTo(eBookSavePath string) { // 生成 ebook，根据后缀生成不同格式mobi/epub
+	if 100 == bk.ChapterID { // 没有内容
+		os.RemoveAll(bk.TmpDir)
+		return
+	}
 	eBookExt := strings.ToLower( filepath.Ext(eBookSavePath) )
 	if eBookExt == ".epub" { // 0=unsupport, 1=epub, 2=mobi
 		bk.EBookFileFormat = 1

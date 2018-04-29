@@ -1,7 +1,6 @@
 package foxbook
 
 import (
-	"github.com/axgle/mahonia"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/axgle/mahonia"
 )
 
 // 全局变量，避免多次载入
@@ -267,7 +268,7 @@ func FoxBookServer(w http.ResponseWriter, r *http.Request) {
 		fp(w, "\t<title>TOC of " + bookName + "</title>\n" + "\t<style>\n" + StyleLI + "\t</style>\n" + HtmlHeadBodyC)
 		fp(w, "<center><h3>" + bookName + "</h3></center>\n")
 		fp(w, "<ol>\n")
-	
+
 		for j, page := range Shelf[bookIDX].chapters {
 			fpf(w, "\t<li><a href=\"?a=flp&b=%d&c=%d\">%s</a> (%s)</li>\n", bookIDX, j, page.pagename, page.size)
 		}
@@ -356,7 +357,7 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 		fenc := r.FormValue("e")
 
 		newName := "xxxxxx"
-		if ( fenc == "UTF-8" ) { // 这是在网页上上传的
+		if fenc == "UTF-8" { // 这是在网页上上传的
 			newName = ffh.Filename
 		} else { // 最大可能是 curl 上传的
 			// 文件名 xx[1]: GBK -> UTF-8
@@ -376,7 +377,7 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 		defer f.Close()
 		io.Copy(f,file)
 
-		fpf(w, "Server received your file, File Size: %d", file.(Sizer).Size())
+		fpf(w, "Server received your file, File Size: %d\n", file.(Sizer).Size())
 		p("- Server received a file, File Size: ", file.(Sizer).Size(), "\n")
 		return
 	}

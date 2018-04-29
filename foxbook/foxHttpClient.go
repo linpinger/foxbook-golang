@@ -1,21 +1,20 @@
 package foxbook
 
 import (
-	"github.com/axgle/mahonia"
+	"bytes"
 	"compress/gzip"
+	"crypto/rand"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
-
-	"bytes"
-	"os"
-	"io"
-	"path/filepath"
-	"crypto/rand"
-	"fmt"
+	"github.com/axgle/mahonia"
 )
 
 // var p = fmt.Println
