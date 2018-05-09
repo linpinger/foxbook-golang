@@ -137,7 +137,9 @@ func main() {
 	var listenPort, rootDir string
 	var ebookIDX int
 	var ebookSavePath string
+	var qidianID string
 
+	flag.StringVar(&qidianID, "qd2m", "0", "qidian epub to mobi(if not exist, download first)")
 	flag.IntVar(&ebookIDX, "idx", -1, "which idx(base 0) book to mobi/epub")
 	flag.StringVar(&ebookSavePath, "to", "", "cmd: mobi/epub save path or dir2mobi or automobi or autoepub")
 
@@ -148,7 +150,7 @@ func main() {
 	flag.Parse()
 
 	if bVersion {
-		p("Version : 2018-04-28")
+		p("Version : 2018-05-08")
 //		p("Compiler: go version go1.10.1 windows/386")
 		p("Compiler: go version go1.10.1 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [fmlPath]")
@@ -157,6 +159,8 @@ func main() {
 		p("\t", os.Args[0], "-to all_xx.mobi xx.fml")
 		p("\t", os.Args[0], "-to xx.mobi -idx 0 all.fml")
 		p("\t", os.Args[0], "-to dir2mobi -d /dev/shm/00/")
+		p("\t", os.Args[0], "-qd2m 1939238")
+		p("\t", os.Args[0], "-qd2m 1939238 -to \"xxxx_#qidianid#_#bookname#_#bookauthor#.epub\"")
 		if isBinNameHTTP {
 			p("\n\tNow in HTTP Mod, No Use of CMD Functions: update, toEbook\n\tBut You Can Do That in Browser /fb/\n\tOr Rename This Bin to fb.exe\n")
 		}
@@ -185,6 +189,14 @@ func main() {
 	fmlPath = findFMLFile(fmlPath)
 
 	// Start
+	if "0" != qidianID { // qidian Epub 2 Mobi
+		if ! strings.Contains(qidianID, ".epub") {
+			foxbook.DownFile("http://download.qidian.com/epub/" + qidianID + ".epub", qidianID + ".epub")
+			qidianID = qidianID + ".epub"
+		}
+		foxbook.QidianEpub2Mobi(qidianID, ebookSavePath)
+		os.Exit(0)
+	}
 
 	if "http://127.0.0.0/f" != postURL { // 发送文件
 		if foxbook.FileExist(fmlPath) {

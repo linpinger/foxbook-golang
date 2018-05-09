@@ -148,6 +148,14 @@ func PostFile(filePath string, postURL string) string { // http://www.golangnote
 	return string(bys)
 }
 
+func DownFile(iURL string, savePath string) int64 {
+	f, _ := os.OpenFile(savePath, os.O_RDWR|os.O_CREATE, 0666)
+	req, _ := http.NewRequest("GET", iURL, nil)
+	resp, _ := http.DefaultClient.Do(req)
+	fileLen, _ := io.Copy(f, resp.Body)
+	return  fileLen
+}
+
 /*
 func main() {
 	p( PostFile("c:/bin/AutoHotkey/AutoHotkey.exe", "http://127.0.0.1/f") )

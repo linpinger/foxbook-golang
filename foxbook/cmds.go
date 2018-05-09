@@ -125,11 +125,12 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 	cookie := getCookie(cookiePath)
 	switch true {  // RE 只要获取 bookname, newpageurl 即可比较
 		case strings.Contains(firstBookURL, ".biquge.com") :
+			// cookie2Field( cookie["piaotian"] )
 			html = html2utf8( gethtml( "http://www.biquge.com.tw/modules/article/bookcase.php", strings.Trim( cookie["rawbiquge"], "\n\r " ) ), "http://www.biquge.com.tw/modules/article/bookcase.php")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"([^\"]*)\""
 			siteNum = 20
 		case strings.Contains(firstBookURL, ".dajiadu.net") :
-			html = html2utf8( gethtml( "http://www.dajiadu.net/modules/article/bookcase.php", cookie2Field( cookie["dajiadu"] ) ), "http://www.dajiadu.net/modules/article/bookcase.php")
+			html = html2utf8( gethtml( "http://www.dajiadu.net/modules/article/bookcase.php", strings.Trim( cookie["rawdajiadu"], "\n\r " ) ), "http://www.dajiadu.net/modules/article/bookcase.php")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
 			siteNum = 40
 		case strings.Contains(firstBookURL, ".wutuxs.com") :
@@ -138,21 +139,21 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 			siteNum = 42
 //			p("len html: ", len(html))
 		case strings.Contains(firstBookURL, ".piaotian.") :
-			html = html2utf8( gethtml( "http://www.piaotian.com/modules/article/bookcase.php", cookie2Field( cookie["piaotian"] ) ), "http://www.piaotian.com/modules/article/bookcase.php")
+			html = html2utf8( gethtml( "https://www.piaotian.com/modules/article/bookcase.php", strings.Trim( cookie["rawpiaotian"], "\n\r " ) ), "https://www.piaotian.com/modules/article/bookcase.php")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
 			siteNum = 16
 		case strings.Contains(firstBookURL, ".xxbiquge.") :
-			html = html2utf8( gethtml( "http://www.xxbiquge.com/bookcase.php", cookie2Field( cookie["xxbiquge"] ) ), "http://www.xxbiquge.com/bookcase.php")
-			html += html2utf8( gethtml( "http://www.xxbiquge.com/bookcase.php?page=2", cookie2Field( cookie["xxbiquge"] ) ), "http://www.xxbiquge.com/bookcase.php")
-			html += html2utf8( gethtml( "http://www.xxbiquge.com/bookcase.php?page=3", cookie2Field( cookie["xxbiquge"] ) ), "http://www.xxbiquge.com/bookcase.php")
+			html = html2utf8( gethtml( "https://www.xxbiquge.com/bookcase.php", strings.Trim( cookie["rawxxbiquge"], "\n\r " ) ), "https://www.xxbiquge.com/bookcase.php")
+			html += html2utf8( gethtml( "https://www.xxbiquge.com/bookcase.php?page=2", strings.Trim( cookie["rawxxbiquge"], "\n\r " ) ), "https://www.xxbiquge.com/bookcase.php")
+			html += html2utf8( gethtml( "https://www.xxbiquge.com/bookcase.php?page=3", strings.Trim( cookie["rawxxbiquge"], "\n\r " ) ), "https://www.xxbiquge.com/bookcase.php")
 			res = "(?smi)\"s2\"><a [^>]*?>([^<]*)<.*?\"s4\"><a href=\"([^\"]*)\""
 			siteNum = 24
 		case strings.Contains(firstBookURL, ".13xxs.") :
-			html = html2utf8( gethtml( "http://www.13xxs.com/modules/article/bookcase.php?classid=0", cookie2Field( cookie["13xxs"] ) ), "http://www.13xxs.com/modules/article/bookcase.php?classid=0")
+			html = html2utf8( gethtml( "http://www.13xxs.com/modules/article/bookcase.php?classid=0", strings.Trim( cookie["raw13xxs"], "\n\r " ) ), "http://www.13xxs.com/modules/article/bookcase.php?classid=0")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*?/([0-9]*.html)\""
 			siteNum = 13
 		case strings.Contains(firstBookURL, ".xqqxs.") : // 同 dajiadu
-			html = html2utf8( gethtml( "http://www.xqqxs.com/modules/article/bookcase.php?delid=604", cookie2Field( cookie["xqqxs"] ) ), "http://www.xqqxs.com/modules/article/bookcase.php?delid=604")
+			html = html2utf8( gethtml( "http://www.xqqxs.com/modules/article/bookcase.php?delid=604", strings.Trim( cookie["rawxqqxs"], "\n\r " ) ), "http://www.xqqxs.com/modules/article/bookcase.php?delid=604")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
 			siteNum = 17
 		default : // 不支持的书架，例如qidian
