@@ -71,7 +71,8 @@ func QidianEpub2Mobi(epubPath string, savePath string) { // savePath默认为qid
 			}
 			// 输出名
 			if "" == savePath {
-				savePath = qidianid + ".mobi"
+				savePath = strings.Replace(epubPath, ".epub", "", -1)
+				savePath = savePath + ".mobi"
 			} else {
 				savePath = strings.Replace(savePath, "#qidianid#", qidianid, -1)
 				savePath = strings.Replace(savePath, "#bookname#", bookname, -1)

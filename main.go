@@ -150,7 +150,7 @@ func main() {
 	flag.Parse()
 
 	if bVersion {
-		p("Version : 2018-05-08")
+		p("Version : 2018-05-09")
 //		p("Compiler: go version go1.10.1 windows/386")
 		p("Compiler: go version go1.10.1 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [fmlPath]")
@@ -183,20 +183,23 @@ func main() {
 		posDirList = []string {"./", "C:/bin/sqlite/FoxBook/", "D:/bin/sqlite/FoxBook/", "C:/bin/sqlite/FoxBook/Y/", "D:/bin/sqlite/FoxBook/Y/"}
 	}
 
-	if "" != cookiePath {
-		findCookieFile()
-	}
-	fmlPath = findFMLFile(fmlPath)
-
 	// Start
 	if "0" != qidianID { // qidian Epub 2 Mobi
 		if ! strings.Contains(qidianID, ".epub") {
-			foxbook.DownFile("http://download.qidian.com/epub/" + qidianID + ".epub", qidianID + ".epub")
+			if foxbook.DownFile("http://download.qidian.com/epub/" + qidianID + ".epub", qidianID + ".epub") < 999 {
+				p("Error: epub size too small, means not exist on qidian server")
+				os.Exit(0)
+			}
 			qidianID = qidianID + ".epub"
 		}
 		foxbook.QidianEpub2Mobi(qidianID, ebookSavePath)
 		os.Exit(0)
 	}
+
+	if "" != cookiePath {
+		findCookieFile()
+	}
+	fmlPath = findFMLFile(fmlPath)
 
 	if "http://127.0.0.0/f" != postURL { // 发送文件
 		if foxbook.FileExist(fmlPath) {
