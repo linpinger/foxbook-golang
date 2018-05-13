@@ -44,7 +44,7 @@ func QidianEpub2Mobi(epubPath string, savePath string) { // savePath默认为qid
 //	booktype := ""
 //	bookinfo := ""
 
-	for _, f := range r.File { // 遍历zip中的文件，获取信息及TOC
+	for _, f := range r.File { // 遍历zip中的文件，获取信息
 		if "title.xhtml" == f.Name {
 			reInfos, _ := regexp.Compile("(?smi)<li><b>书名</b>：<a href=\"http://([0-9]*).qidian.com[^>]*?>([^<]*?)</a>.*<li><b>作者</b>：<a[^>]*?>([^<]*?)</a>.*<li><b>主题</b>：([^<]*?)<.*<li><b>简介</b>：<pre>(.*)</pre>")
 			infos := reInfos.FindAllStringSubmatch(string(getHtmlInZip(f)), -1)
@@ -53,7 +53,10 @@ func QidianEpub2Mobi(epubPath string, savePath string) { // savePath默认为qid
 			bookauthor = infos[0][3]
 //			booktype = infos[0][4]
 //			bookinfo = infos[0][5]
+			break
 		}
+	}
+	for _, f := range r.File { // 遍历zip中的文件，获取TOC
 		if "catalog.html" == f.Name {
 			reTOC, _ := regexp.Compile("(?smi)<a href=\"(content[0-9]*_[0-9]*.html)\">([^<]*)</a>")
 			toc := reTOC.FindAllStringSubmatch(string(getHtmlInZip(f)), -1)
@@ -79,6 +82,7 @@ func QidianEpub2Mobi(epubPath string, savePath string) { // savePath默认为qid
 				savePath = strings.Replace(savePath, "#bookauthor#", bookauthor, -1)
 			}
 			bk.SaveTo(savePath)
+			break
 		}
 	}
 }
