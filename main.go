@@ -150,9 +150,8 @@ func main() {
 	flag.Parse()
 
 	if bVersion {
-		p("Version : 2018-05-13")
-//		p("Compiler: go version go1.10.1 windows/386")
-		p("Compiler: go version go1.10.1 linux/amd64")
+		p("Version : 2018-06-11 public")
+		p("Compiler: go version go1.10.3 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [fmlPath]")
 		p("Example :")
 		p("\t", os.Args[0], "-pu http://127.0.0.1/f fileToPost.path")

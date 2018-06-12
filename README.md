@@ -54,7 +54,30 @@
 - foxbook-golang-x86.exe -h 可以查看命令行参数
 - 如果是服务器模式，默认跟目录为当前目录，默认端口为80(linux/mac下因权限问题需使用-p参数修改一下端口)
 
+## 2018-06-12 交叉编译
+- 原来go支持交叉编译，本人之前还傻傻的在多个平台上去编译，WTF
+- 只要修改环境变量 `GOARCH` 和 `GOOS` 即可，例如: 
+
+```shell
+export PATH="/dev/shm/go/bin:$PATH"
+export GOROOT="/dev/shm/go"
+# export GOPATH="/dev/shm"
+export GOPATH="$HOME"
+
+export GOOS=linux
+export GOARCH=amd64
+echo "- $GOOS $GOARCH"
+go build -o foxbook-golang-linux-x64.elf -ldflags "-s -w" github.com/linpinger/foxbook-golang
+
+export GOOS=windows
+export GOARCH=386
+echo "- $GOOS $GOARCH"
+go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook-golang
+
+```
+
 **更新日志:**
+- 2018-06-11: 修改: kindle固件升级导致字体不可用，修改CSS以适应
 - 2018-05-13: 修复: epub内的文件随机顺序造成的获取信息失败bug
 - 2018-05-09: 修复: 生成文件名修复，epub不存在检测
 - 2018-05-08: 修改: 书架使用rawcookie，添加: 起点epub转mobi

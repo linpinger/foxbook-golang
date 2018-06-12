@@ -30,8 +30,7 @@ type EBook struct {
 	BookName, BookCreator string
 	BookUUID string
 	DefNameNoExt, ImageExt, ImageMetaType, CoverImgNameNoExt, CoverImgExt string
-	NFontType int // 0=无字体, 1=阅读器font目录下字体名, 2=嵌入mobi字体
-	BodyFont string
+	CSS string
 
 	Chapters []ChapterItem
 	ChapterID int
@@ -49,8 +48,7 @@ func NewEBook(bookName string, tmpDir string) *EBook {
 	bk.ImageMetaType = "image/png"
 	bk.CoverImgNameNoExt = "FoxCover"
 	bk.CoverImgExt = ".png"
-	bk.NFontType = 0
-	bk.BodyFont = ""
+	bk.CSS = "h2,h3,h4{text-align:center;}\n\nbody{font-size: 1.1em;}\n\n"
 
 	bk.Chapters = nil
 	bk.ChapterID = 100
@@ -65,16 +63,7 @@ func NewEBook(bookName string, tmpDir string) *EBook {
 
 func (bk *EBook) createChapterHTML(Title string, Content string, iPageID int) { // 生成章节页面
 	htmlPath := spf("%s/html/%d.html", bk.TmpDir, iPageID)
-	fontCSS := ""
-	switch bk.NFontType {
-		case 0:
-			fontCSS = ""
-		case 1:
-			fontCSS = "\t\t@font-face { font-family: \"hei\"; src: local(\"" + bk.BodyFont + "\"); }\n\t\t.content { font-family: \"hei\"; }"
-		case 2:
-			fontCSS = "\t\t@font-face { font-family: \"hei\"; src: url(\"" + bk.BodyFont + "\"); }\n\t\t.content { font-family: \"hei\"; }"
-	}
-	html := spf("<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"zh-CN\">\n<head>\n\t<title>%s</title>\n\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n\t<style type=\"text/css\">\n\t\th2,h3,h4{text-align:center;}\n%s\n\t</style>\n</head>\n<body>\n<h3>%s</h3>\n\n<div class=\"content\">\n\n\n%s\n\n</div>\n</body>\n</html>\n", Title, fontCSS, Title, Content)
+	html := spf("<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"zh-CN\">\n<head>\n\t<title>%s</title>\n\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n\t<link href=\"../%s.css\" type=\"text/css\" rel=\"stylesheet\" />\n</head>\n<body>\n<h3>%s</h3>\n\n<div class=\"content\">\n\n\n%s\n\n</div>\n</body>\n</html>\n", Title, bk.DefNameNoExt, Title, Content)
 	ioutil.WriteFile(htmlPath , []byte(html), os.ModePerm)
 }
 
@@ -82,6 +71,11 @@ func (bk *EBook) AddChapter(Title string, Content string, iLevel int) {
 	bk.ChapterID += 1
 	bk.Chapters = append(bk.Chapters, ChapterItem{bk.ChapterID, Title, iLevel} )
 	bk.createChapterHTML(Title, Content, bk.ChapterID) // 生成章节页面
+}
+
+func (bk *EBook) createCSS() { // 生成CSS
+	cssPath := spf("%s/%s.css", bk.TmpDir, bk.DefNameNoExt)
+	ioutil.WriteFile(cssPath, []byte(bk.CSS), os.ModePerm)
 }
 
 func (bk *EBook) createIndexHTM() { // 生成索引页
@@ -193,6 +187,7 @@ func (bk *EBook) SaveTo(eBookSavePath string) { // 生成 ebook，根据后缀�
 		bk.EBookFileFormat = 0
 	}
 
+	bk.createCSS()
 	bk.createIndexHTM()
 	bk.createNCX()
 	opfPath := bk.createOPF()
@@ -251,16 +246,16 @@ func (bk *EBook) SaveTo(eBookSavePath string) { // 生成 ebook，根据后缀�
 }
 func (bk *EBook) SetBodyFont(iFontNameOrPath string) {
 	fontExt := strings.ToLower( filepath.Ext(iFontNameOrPath) )
-	// NFontType int // 0=无字体, 1=阅读器font目录下字体名, 2=嵌入mobi字体
 	if fontExt == ".ttf" || fontExt == ".ttc" || fontExt == ".otf" {
 		fName := filepath.Base(iFontNameOrPath)
-		bk.NFontType = 2
-		bk.BodyFont = "../" + fName
+		bk.CSS = bk.CSS + "\n@font-face { font-family: \"hei\"; src: url(\"../" + fName + "\"); }\n.content { font-family: \"hei\"; }\n\n"
 		FileCopy(iFontNameOrPath, bk.TmpDir + "/" + fName)
 	} else {
-		bk.NFontType = 1
-		bk.BodyFont = iFontNameOrPath
+		bk.CSS = bk.CSS + "\n@font-face { font-family: \"hei\"; src: local(\"" + iFontNameOrPath + "\"); }\n.content { font-family: \"hei\"; }\n\n"
 	}
+}
+func (bk *EBook) SetCSS(iCSS string) {
+	bk.CSS = iCSS
 }
 func (bk *EBook) SetCover(imgPath string) {
 	bk.CoverImgExt = filepath.Ext(imgPath)

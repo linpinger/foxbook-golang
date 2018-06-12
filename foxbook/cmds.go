@@ -287,7 +287,7 @@ func ExportEBook(ebookPath string, fmlPath string, bookIDX int) { // 导出函�
 
 	bk := NewEBook(oBookName, filepath.Dir(ebookPath) + "/foxebooktmpdir") // 临时文件夹放到ebook保存目录
 
-	bk.SetBodyFont("Zfull-GB") // FZLanTingHei-R-GBK Zfull-GB FZLanTingHei-DB-GBK
+//	bk.SetBodyFont("Zfull-GB") // FZLanTingHei-R-GBK Zfull-GB FZLanTingHei-DB-GBK 2018-06: Kindle升级固件后5.9.6，这个字体显示异常
 	if "windows" == runtime.GOOS {
 		if FileExist("D:/etc/fox/foxbookCover.jpg") {
 			bk.SetCover("D:/etc/fox/foxbookCover.jpg") // 设置封面
