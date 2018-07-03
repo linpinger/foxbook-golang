@@ -77,6 +77,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2018-06-13: 添加: 上传页面添加一临时文本框，便于在各设备共享文本
 - 2018-06-11: 修改: kindle固件升级导致字体不可用，修改CSS以适应
 - 2018-05-13: 修复: epub内的文件随机顺序造成的获取信息失败bug
 - 2018-05-09: 修复: 生成文件名修复，epub不存在检测

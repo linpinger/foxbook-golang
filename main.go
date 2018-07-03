@@ -150,7 +150,7 @@ func main() {
 	flag.Parse()
 
 	if bVersion {
-		p("Version : 2018-06-11 public")
+		p("Version : 2018-07-03 public")
 		p("Compiler: go version go1.10.3 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [fmlPath]")
 		p("Example :")

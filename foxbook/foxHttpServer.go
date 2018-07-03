@@ -349,36 +349,44 @@ type Sizer interface {
 }
 
 func PostFileServer(w http.ResponseWriter, r *http.Request) {
+	tempTxtName := "temp.txt"
 	p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
 	if "POST" == r.Method {
-		p("- New File Uploading From: " + r.RemoteAddr)
-		r.ParseMultipartForm(99 << 20) // 这里设置为99M，如果文件大小大于99M会出现异常，默认BODY内存大小 32 MB
-		file, ffh, err := r.FormFile("f")
-		fenc := r.FormValue("e")
+		tempText := r.FormValue("text")
+		if "" == tempText { // 文件上传
+			p("- New File Uploading From: " + r.RemoteAddr)
+			r.ParseMultipartForm(99 << 20) // 这里设置为99M，如果文件大小大于99M会出现异常，默认BODY内存大小 32 MB
+			file, ffh, err := r.FormFile("f")
+			fenc := r.FormValue("e")
 
-		newName := "xxxxxx"
-		if fenc == "UTF-8" { // 这是在网页上上传的
-			newName = ffh.Filename
-		} else { // 最大可能是 curl 上传的
-			// 文件名 xx[1]: GBK -> UTF-8
-			re := regexp.MustCompile("filename=\"(.*)\"")
-			newName = re.FindStringSubmatch( mahonia.NewDecoder("gb18030").ConvertString( ffh.Header.Get("Content-Disposition") ) )[1]
-			newName = filepath.Base(newName) // 如果包含路径，只取文件名
+			newName := "xxxxxx"
+			if fenc == "UTF-8" { // 这是在网页上上传的
+				newName = ffh.Filename
+			} else { // 最大可能是 curl 上传的
+				// 文件名 xx[1]: GBK -> UTF-8
+				re := regexp.MustCompile("filename=\"(.*)\"")
+				newName = re.FindStringSubmatch( mahonia.NewDecoder("gb18030").ConvertString( ffh.Header.Get("Content-Disposition") ) )[1]
+				newName = filepath.Base(newName) // 如果包含路径，只取文件名
+			}
+
+			p("- Name:", newName)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			defer file.Close()
+
+			f,err:=os.Create(newName)
+			defer f.Close()
+			io.Copy(f,file)
+
+			fpf(w, "Server received your file, File Size: %d\n", file.(Sizer).Size())
+			p("- Server received a file, File Size: ", file.(Sizer).Size(), "\n")
+		} else { // 便笺
+			p("- tempText len: %d", len(tempText))
+			ioutil.WriteFile(tempTxtName, []byte(tempText), os.ModePerm)
+			http.Redirect(w, r, "/f", http.StatusMovedPermanently)
 		}
-
-		p("- Name:", newName)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		defer file.Close()
-
-		f,err:=os.Create(newName)
-		defer f.Close()
-		io.Copy(f,file)
-
-		fpf(w, "Server received your file, File Size: %d\n", file.(Sizer).Size())
-		p("- Server received a file, File Size: ", file.(Sizer).Size(), "\n")
 		return
 	}
 
@@ -386,7 +394,7 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 //		p("- New GET Uploading Page From: " + r.RemoteAddr)
 		w.Header().Add("Content-Type", "text/html")
 		w.WriteHeader(200)
-		html := `<!DOCTYPE html>
+		hhead := `<!DOCTYPE html>
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -404,10 +412,23 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 Curl Upload Example(File Size Limit: 99M):<br/>
 curl http://127.0.0.1:55555/f -F f=@"hello.txt"
 
+<hr>
+<form enctype="multipart/form-data" action="/f" method="POST">
+	<input type="submit" value="Save Test" />
+	<br />
+	<textarea name="text" cols="70" rows="15">`
+		hfoot := `</textarea>
+</form>
+
 </body>
 </html>
 `
-		fp(w, html)
+		showText := "tmp Text"
+		if FileExist(tempTxtName) { // 读取txt
+			showBytes, _ := ioutil.ReadFile(tempTxtName)
+			showText = string(showBytes)
+		}
+		fpf(w, "%s%s%s", hhead, showText, hfoot)
 	}
 
 }
