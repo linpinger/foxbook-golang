@@ -343,11 +343,6 @@ func FoxBookServer(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// 获取大小的接口
-type Sizer interface {
-	Size() int64
-}
-
 func PostFileServer(w http.ResponseWriter, r *http.Request) {
 	tempTxtName := "temp.txt"
 	p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
@@ -378,10 +373,10 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 
 			f,err:=os.Create(newName)
 			defer f.Close()
-			io.Copy(f,file)
+			fLen, _ := io.Copy(f,file)
 
-			fpf(w, "Server received your file, File Size: %d\n", file.(Sizer).Size())
-			p("- Server received a file, File Size: ", file.(Sizer).Size(), "\n")
+			fpf(w, "Server received your file, File Size: %d\n", fLen)
+			p("- Server received a file, File Size: ", fLen, "\n")
 		} else { // 便笺
 			p("- tempText len: %d", len(tempText))
 			ioutil.WriteFile(tempTxtName, []byte(tempText), os.ModePerm)
