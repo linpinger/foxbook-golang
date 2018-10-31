@@ -72,7 +72,7 @@ func gbk2utf8(gbkStr string) string {
 }
 
 func html2utf8(html []byte, inURL string) string {
-	if strings.Contains(inURL, ".xxbiquge.") {
+	if strings.Contains(inURL, ".xbiquge6.") { // xxbiquge
 		return string(html)
 	}
 	if strings.Contains(inURL, "files.qidian.com/") { // 2017-6-5: 接口失效可删除

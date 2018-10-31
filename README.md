@@ -20,7 +20,6 @@
 
 **预编译版的下载地址:**
 - 已编译的不一定是最新的，谁叫我懒呢，可使用-v参数查看版本，需与更新日志日期一致才是最新版，目前包含win 32/64位，linux x86/x64位，MacOSX x64位
-- 七牛(速度快，就是每月有流量限制): http://linpinger.qiniudn.com/prj/foxbook-golang-bin.zip
 - SF(慢，好像没有限制): http://master.dl.sourceforge.net/project/foxtestphp/prj/foxbook-golang-bin.zip
 
 **编译:**
@@ -77,6 +76,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2018-10-31: 修改: 一些站点书架的处理
 - 2018-09-12: 修改: 上传文件异常处理：使用复制返回的长度代替不靠谱的sizer接口，抄来的代码不知其所以然
 - 2018-06-13: 添加: 上传页面添加一临时文本框，便于在各设备共享文本
 - 2018-06-11: 修改: kindle固件升级导致字体不可用，修改CSS以适应
