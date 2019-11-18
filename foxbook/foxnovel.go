@@ -143,39 +143,58 @@ func getContent(html string) string {
 	html = reR4.ReplaceAllString(html, "")
 	strings.TrimLeft(html, "\n ")
 	html = strings.Replace(html, "\n\n", "\n", -1)
+	html = strings.Replace(html, "　　", "", -1)
 	return html
 }
 
-func qidian_GetTOC_Android7(jsonStr string) [][]string {
-	reID, _ := regexp.Compile("(?i)\"BookId\":([0-9]+),")
-	mID := reID.FindStringSubmatch(jsonStr)
-//	qdID, _ := strconv.Atoi(mID[1])
-//	urlHead := "http://files.qidian.com/Author" + strconv.Itoa(1 + ( qdID % 8 )) + "/" + mID[1] + "/"
-	urlHead := "GetContent?BookId=" + mID[1] + "&ChapterId=" // + pageid
+func isQidanTOCURL_Touch7_Ajax(iURL string) bool {
+	// https://m.qidian.com/majax/book/category?bookId=1016319872
+	return strings.Contains(iURL, "m.qidian.com/majax/book/category")
+}
 
-	reLink, _ := regexp.Compile("(?mi)\"c\":([0-9]+),\"n\":\"([^\"]+)\".*?\"v\":([01]),")
+func qidian_GetTOC_Touch7_Ajax(jsonStr string) [][]string {
+	reID, _ := regexp.Compile("(?i)\"bookId\":\"([0-9]+)\",")
+	mID := reID.FindStringSubmatch(jsonStr)
+
+	// {"uuid":1,"cN":"001巴克的早餐","uT":"2019-09-06  14:05","cnt":2089,"cU":"","id":491020997,"sS":1},
+	// {"uuid":126,"cN":"第125章 死团子当活团子医","uT":"2019-10-18  12:12","cnt":3142,"cU":"","id":498495980,"sS":0},
+	reLink, _ := regexp.Compile("(?mi)\"cN\":\"([^\"]+)\".*?\"id\":([0-9]+).*?\"sS\":([01])")
 	lks := reLink.FindAllStringSubmatch(jsonStr, -1)
 	if nil == lks {
 		return nil
 	}
 	var olks [][]string // [] ["", pageurl, pagename]
 	for _, lk := range lks {
-		if "0" == lk[3] {
-			olks = append(olks, []string{"", urlHead + lk[1], lk[2]} )
+		if "1" == lk[3] {
+			olks = append(olks, []string{"", qidian_getContentURL_Touch7_Ajax(lk[2], mID[1]), lk[1]})
+		} else {
+			olks = append(olks, []string{"", qidian_getContentURL_Touch7_Ajax(lk[2], mID[1]), "VIP: " + lk[1]})
+			break
 		}
 	}
 	return olks
 }
 
-func qidian_GetContent_Android7(jsonStr string) string {
-	reID, _ := regexp.Compile("(?smi)\"Data\":\"([^\"]+)\"")
+func isQidanContentURL_Touch7_Ajax(iURL string) bool {
+	// https://m.qidian.com/majax/chapter/getChapterInfo?bookId=1015209014&chapterId=462636481
+	return strings.Contains(iURL, "m.qidian.com/majax/chapter/getChapterInfo")
+}
+
+func qidian_getContentURL_Touch7_Ajax(pageID string, bookID string) string {
+	return "https://m.qidian.com/majax/chapter/getChapterInfo?bookId=" + bookID + "&chapterId=" + pageID
+}
+
+func qidian_GetContent_Touch7_Ajax(jsonStr string) string {
+	reID, _ := regexp.Compile("(?smi)\"content\":\"([^\"]+)\",")
 	fs := reID.FindStringSubmatch(jsonStr)
 	if nil != fs {
 		jsonStr = fs[1]
 	}
 
-	jsonStr = strings.Replace(jsonStr, "\\r\\n　　", "\n", -1)
-	jsonStr = strings.Replace(jsonStr, "　　", "", -1)
+	if strings.HasPrefix(jsonStr, "<p>　　") {
+		jsonStr = strings.TrimLeft(jsonStr, "<p>　　")
+	}
+	jsonStr = strings.Replace(jsonStr, "<p>　　", "\n", -1)
 	return jsonStr
 }
 

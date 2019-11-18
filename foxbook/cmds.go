@@ -50,9 +50,29 @@ func compare2GetNewPages(book *Book, toc [][]string) int { // 比较得到新章
 		}
 	}
 
-	bFind := false
 	newPageCount := 0
 	chapters := book.chapters
+
+	// 2019-09-11: 从后往前搜，找到idx
+	idxInTOC := 0
+	for i := len(toc) - 1; i >= 0 ; i-- {
+		lk := toc[i]
+		if firstURL == lk[1] {
+			idxInTOC = i
+			break
+		}
+	}
+	for i, lk := range toc {
+		if i >= idxInTOC {
+			if ! strings.Contains(locPageStr, lk[1] + "|") {
+				newPageCount += 1
+				chapters = append(chapters, Page{ []byte(lk[2]), []byte(lk[1]), nil, []byte("0") } )
+			}
+		}
+	}
+
+/*
+	bFind := false
 	for _, lk := range toc {
 		if bFind {
 			if ! strings.Contains(locPageStr, lk[1] + "|") {
@@ -65,6 +85,7 @@ func compare2GetNewPages(book *Book, toc [][]string) int { // 比较得到新章
 			}
 		}
 	}
+*/
 	if newPageCount > 0 {
 		book.chapters = chapters
 	}
@@ -75,8 +96,8 @@ func getBookNewPages(book *Book) { // 下载toc并写入新章节
 	nowBookURL := string(book.bookurl)
 	var bc [][]string
 	html := html2utf8( gethtml(nowBookURL, ""), nowBookURL)
-	if strings.Contains(nowBookURL, ".if.qidian.com/") { // qidian_android
-		bc = qidian_GetTOC_Android7(html)
+	if isQidanTOCURL_Touch7_Ajax(nowBookURL) {
+		bc = qidian_GetTOC_Touch7_Ajax(html)
 	} else {
 		bc = getTOC( html )
 	}
@@ -107,8 +128,8 @@ func updatePageContent(inURL string, page *Page) { // 下载内容页并写入�
 	var nowLen int = 0
 	html := html2utf8( gethtml(inURL, ""), inURL)
 	var textStr string
-	if strings.Contains(inURL, ".qidian.com/") { // qidian
-		textStr = qidian_GetContent_Android7( html )
+	if isQidanContentURL_Touch7_Ajax(inURL) { // qidian
+		textStr = qidian_GetContent_Touch7_Ajax( html )
 	} else {
 		textStr = getContent( html )
 	}
@@ -171,6 +192,9 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 	nowBookAllPageStr := ""
 	newpageurl := ""
 	for i, book := range shelf {
+		if string(book.statu) == "1" {
+			continue
+		}
 		bInBookCase = false
 		for _, lk := range lks {
 			if lk[1] == string(book.bookname) { // 找到书名

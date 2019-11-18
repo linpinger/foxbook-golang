@@ -48,7 +48,7 @@ func NewEBook(bookName string, tmpDir string) *EBook {
 	bk.ImageMetaType = "image/png"
 	bk.CoverImgNameNoExt = "FoxCover"
 	bk.CoverImgExt = ".png"
-	bk.CSS = "h2,h3,h4{text-align:center;}\n\nbody{font-size: 1.1em;}\n\n"
+	bk.CSS = "h2,h3,h4{text-align:center;}\n\n"
 
 	bk.Chapters = nil
 	bk.ChapterID = 100
@@ -160,7 +160,8 @@ func (bk *EBook) createOPF() string { // 生成OPF
 	for _, it := range bk.Chapters {
 		buf.WriteString( spf("\t<itemref idref=\"page%d\" />\n", it.ID) )
 	}
-	buf.WriteString( spf("</spine>\n\n\n<guide>\n\t<reference type=\"text\" title=\"正文\" href=\"html/%d.html\"/>\n\t<reference type=\"toc\" title=\"目录\" href=\"%s.htm\"/>\n</guide>\n\n</package>\n\n\n", bk.Chapters[0].ID, bk.DefNameNoExt ) )
+//	buf.WriteString( spf("</spine>\n\n\n<guide>\n\t<reference type=\"text\" title=\"正文\" href=\"html/%d.html\"/>\n\t<reference type=\"toc\" title=\"目录\" href=\"%s.htm\"/>\n</guide>\n\n</package>\n\n\n", bk.Chapters[0].ID, bk.DefNameNoExt ) )
+	buf.WriteString( spf("</spine>\n\n\n<guide>\n\t<reference type=\"text\" title=\"正文\" href=\"%s.htm\"/>\n\t<reference type=\"toc\" title=\"目录\" href=\"%s.htm\"/>\n</guide>\n\n</package>\n\n\n", bk.DefNameNoExt, bk.DefNameNoExt ) )
 
 	ioutil.WriteFile(htmlPath, buf.Bytes(), os.ModePerm)
 	return htmlPath
