@@ -299,6 +299,7 @@ func ExportEBook(ebookPath string, fmlPath string, bookIDX int) { // 导出函�
 		shelf = Shelf
 	}
 	// 书名
+	oBookAuthor := ""
 	oBookName := strings.TrimSuffix(filepath.Base(fmlPath), filepath.Ext(fmlPath))
 	if oBookName == "FoxBook" { oBookName = "biquge" } // todo 按需修改
 	if bookIDX < 0 { // 所有书
@@ -307,6 +308,7 @@ func ExportEBook(ebookPath string, fmlPath string, bookIDX int) { // 导出函�
 		if "autoepub" == ebookPath { ebookPath = filepath.Dir(fmlPath) + "/" + oBookName + ".epub" }
 	} else {
 		oBookName = string(shelf[bookIDX].bookname)
+		oBookAuthor = string(shelf[bookIDX].author)
 	}
 
 	bk := NewEBook(oBookName, filepath.Dir(ebookPath) + "/foxebooktmpdir") // 临时文件夹放到ebook保存目录
@@ -333,6 +335,7 @@ func ExportEBook(ebookPath string, fmlPath string, bookIDX int) { // 导出函�
 			}
 		}
 	} else { // 单本
+		bk.SetAuthor(oBookAuthor)
 		for _, page := range shelf[bookIDX].chapters {
 			nc := ""
 			for _, line := range strings.Split(string(page.content), "\n") {

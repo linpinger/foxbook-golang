@@ -62,7 +62,7 @@ func QidianEpub2Mobi(epubPath string, savePath string) { // savePath默认为qid
 			toc := reTOC.FindAllStringSubmatch(string(getHtmlInZip(f)), -1)
 			// 开始生成mobi
 			bk := NewEBook(bookname, "./foxbookgotemp")
-			bk.BookCreator = bookauthor
+			bk.SetAuthor(bookauthor)
 //			bk.SetBodyFont("Zfull-GB")  // 2018-06: Kindle升级固件后5.9.6，这个字体显示异常
 			for _, item := range toc {
 				for _, f := range r.File { // 遍历zip中的文件，获取内容

@@ -76,6 +76,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2019-12-12: 修改: 起点epub下载失效，目前根据qidianid还只能获得书名，作者还不好获取，准备根据qidianid生成fml，然后更新，然后tom，修改tomobi时单本带入fml中的author字段
 - 2019-11-18: 修改: 比较新章节时从后向前搜列表，起点Android接口部分失效，替换为m.qidian.com的接口，生成mobi的一些样式修改
 - 2018-10-31: 修改: 一些站点书架的处理
 - 2018-09-12: 修改: 上传文件异常处理：使用复制返回的长度代替不靠谱的sizer接口，抄来的代码不知其所以然

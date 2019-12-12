@@ -255,6 +255,9 @@ func (bk *EBook) SetBodyFont(iFontNameOrPath string) {
 		bk.CSS = bk.CSS + "\n@font-face { font-family: \"hei\"; src: local(\"" + iFontNameOrPath + "\"); }\n.content { font-family: \"hei\"; }\n\n"
 	}
 }
+func (bk *EBook) SetAuthor(iAuthor string) {
+	bk.BookCreator = iAuthor
+}
 func (bk *EBook) SetCSS(iCSS string) {
 	bk.CSS = iCSS
 }

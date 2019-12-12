@@ -112,6 +112,26 @@ func saveFML(shelf []Book, savePath string) {
 	ioutil.WriteFile(savePath, buf.Bytes(), os.ModePerm)
 }
 
+func SimpleFML(bkName string, bkURL string, bkAuthor string, bkQDID string, savePath string) {
+	var buf bytes.Buffer
+	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\n<shelf>\n\n")
+		buf.WriteString("<novel>\n\t<bookname>")
+		buf.WriteString(bkName)
+		buf.WriteString("</bookname>\n\t<bookurl>")
+		buf.WriteString(bkURL)
+		buf.WriteString("</bookurl>\n\t<delurl>")
+		buf.WriteString("</delurl>\n\t<statu>0")
+		buf.WriteString("</statu>\n\t<qidianBookID>")
+		buf.WriteString(bkQDID)
+		buf.WriteString("</qidianBookID>\n\t<author>")
+		buf.WriteString(bkAuthor)
+		buf.WriteString("</author>\n<chapters>\n")
+		buf.WriteString("</chapters>\n</novel>\n\n")
+	buf.WriteString("</shelf>\n")
+
+	ioutil.WriteFile(savePath, buf.Bytes(), os.ModePerm)
+}
+
 func getCookie(cookiePath string) (map[string]string) {
 	cookie := make(map[string]string)
 	ckbs, _ := ioutil.ReadFile(cookiePath)
@@ -183,6 +203,7 @@ func main() {
 
 	var aaa int
 	fmt.Scanf("%c",&aaa)
+	SimpleFML("BookName", "https://m.qidian.com/majax/book/category?bookId=00000", "AUthorName", "00000", "00000.fml") 
 }
 */
 
