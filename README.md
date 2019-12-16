@@ -16,7 +16,9 @@
 
 **亮点:** 通用小说网站规则能覆盖大部分文字站的目录及正文内容分析，不需要针对每个网站的规则
 
-**依赖:** https://github.com/axgle/mahonia
+**依赖:** golang.org/x/text/encoding/simplifiedchinese
+
+**旧版(2019-12-13之前)依赖:** https://github.com/axgle/mahonia
 
 **预编译版的下载地址:**
 - 已编译的不一定是最新的，谁叫我懒呢，可使用-v参数查看版本，需与更新日志日期一致才是最新版，目前包含win 32/64位，linux x86/x64位，MacOSX x64位
@@ -32,10 +34,21 @@
   - set PATH=D:\go\bin;%PATH%
   - set GOROOT=D:\go
   - set GOPATH=D:\prj
-- 下载依赖及源码
+- 依赖的库，GBK与UTF-8互转
+  - 下载这个包(40多M): https://github.com/golang/text/
+  - 或者单独下载这9个文件(对应上面包中文件，按下面路径保存): 
+    - D:\prj\src\golang.org\x\text\transform\transform.go
+	- D:\prj\src\golang.org\x\text\encoding\encoding.go
+	- D:\prj\src\golang.org\x\text\encoding\internal\internal.go
+	- D:\prj\src\golang.org\x\text\encoding\internal\identifier\identifier.go
+	- D:\prj\src\golang.org\x\text\encoding\internal\identifier\mib.go
+	- D:\prj\src\golang.org\x\text\encoding\simplifiedchinese\all.go
+	- D:\prj\src\golang.org\x\text\encoding\simplifiedchinese\gbk.go
+	- D:\prj\src\golang.org\x\text\encoding\simplifiedchinese\hzgb2312.go
+	- D:\prj\src\golang.org\x\text\encoding\simplifiedchinese\tables.go
+
+- 下载源码
   - 不存在git
-    - 打开 https://github.com/axgle/mahonia             点击Download ZIP 按钮
-	- 解压到工作目录，确保路径是这样的 D:\prj\src\github.com\axgle\mahonia\8bit.go
 	- 打开 https://github.com/linpinger/foxbook-golang  点击Download ZIP 按钮
 	- 解压到工作目录，确保路径是这样的 D:\prj\src\github.com\linpinger\foxbook-golang\README.md
   - 如果存在git
@@ -76,6 +89,9 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2019-12-16: 修改: xbiquge6.com to xsbiquge.com
+- 2019-12-13: 测试: GBK2UTF8的转换使用官方的包可以减小exe体积849K
+- 2019-12-13: 修改: 文件服务器检测UA包含Kindle时，添加样式将链接转为按钮，方便下载mobi
 - 2019-12-12: 修改: 起点epub下载失效，目前根据qidianid还只能获得书名，作者还不好获取，准备根据qidianid生成fml，然后更新，然后tom，修改tomobi时单本带入fml中的author字段
 - 2019-11-18: 修改: 比较新章节时从后向前搜列表，起点Android接口部分失效，替换为m.qidian.com的接口，生成mobi的一些样式修改
 - 2018-10-31: 修改: 一些站点书架的处理

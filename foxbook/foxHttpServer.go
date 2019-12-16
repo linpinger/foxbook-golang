@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/axgle/mahonia"
 )
 
 // 全局变量，避免多次载入
@@ -360,7 +358,7 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 			} else { // 最大可能是 curl 上传的
 				// 文件名 xx[1]: GBK -> UTF-8
 				re := regexp.MustCompile("filename=\"(.*)\"")
-				newName = re.FindStringSubmatch( mahonia.NewDecoder("gb18030").ConvertString( ffh.Header.Get("Content-Disposition") ) )[1]
+				newName = re.FindStringSubmatch( GBK2UTF8( ffh.Header.Get("Content-Disposition") ) )[1]
 				newName = filepath.Base(newName) // 如果包含路径，只取文件名
 			}
 
@@ -464,7 +462,12 @@ func (sfh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 		w.Header().Add("Content-Type", "text/html")
 		w.WriteHeader(200)
-		fpf(w, "<!DOCTYPE html>\n<html>\n<head>\n\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n\t<meta name=\"viewport\" content=\"width=device-width; initial-scale=1.0; minimum-scale=0.1; maximum-scale=3.0; \"/>\n\t<title>Index Of %s</title>\n\t<style>\n\t\tli { line-height: 150%% }\n\t</style>\n</head>\n<body>\n\n<h2>Index Of %s</h2>\n<hr>\n<ol>\n\n", r.URL.Path, r.URL.Path)
+		// fmt.Println(r.UserAgent())
+		addStyle := ""
+		if strings.Contains(r.UserAgent(), "Kindle") {
+			addStyle = "\na { width: 40%%; height: 35px; line-height: 35px; padding: 10px; text-align: center; color: #000000; border: 1px solid #000000; border-radius: 5px; display: inline-block; font-size: 1rem; }\n"
+		}
+		fpf(w, "<!DOCTYPE html>\n<html>\n<head>\n\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n\t<meta name=\"viewport\" content=\"width=device-width; initial-scale=1.0; minimum-scale=0.1; maximum-scale=3.0; \"/>\n\t<title>Index Of %s</title>\n\t<style>\n\t\tli { line-height: 150%% }\n%s\t</style>\n</head>\n<body>\n\n<h2>Index Of %s</h2>\n<hr>\n<ol>\n\n", r.URL.Path, addStyle, r.URL.Path)
 
 		for _, fi := range rd {
 			if fi.IsDir() {

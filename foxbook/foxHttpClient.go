@@ -14,8 +14,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"github.com/axgle/mahonia"
+	"golang.org/x/text/encoding/simplifiedchinese"
 )
+//	"github.com/axgle/mahonia"
 
 // var p = fmt.Println
 
@@ -67,16 +68,24 @@ func gethtml1(inURL, inCookieField string) []byte {
 	return nil
 }
 
-func gbk2utf8(gbkStr string) string {
-	return mahonia.NewDecoder("gb18030").ConvertString(gbkStr)
+func GBK2UTF8(gbkStr string) string {
+//	return mahonia.NewDecoder("gb18030").ConvertString(gbkStr)
+	utf8Str, _ := simplifiedchinese.GBK.NewDecoder().String(gbkStr)
+	return utf8Str
+}
+
+func UTF82GBK(utf8Str string) string {
+//	return mahonia.NewEncoder("gb18030").ConvertString(utf8Str)
+	gbkStr, _ := simplifiedchinese.GBK.NewEncoder().String(utf8Str)
+	return gbkStr
 }
 
 func html2utf8(html []byte, inURL string) string {
-	if strings.Contains(inURL, ".xbiquge6.") { // xxbiquge
+	if strings.Contains(inURL, ".xsbiquge.") { // xxbiquge
 		return string(html)
 	}
 	if strings.Contains(inURL, "files.qidian.com/") { // 2017-6-5: 接口失效可删除
-		return gbk2utf8( string(html) )
+		return GBK2UTF8( string(html) )
 	}
 	if strings.Contains(inURL, "qidian.com/") {
 		return string(html)
@@ -88,7 +97,7 @@ func html2utf8(html []byte, inURL string) string {
 	} else {
 		htmlEnc := strings.ToLower( string(mc[1]) )
 		if "gbk" == htmlEnc || "gb2312" == htmlEnc || "gb18030" == htmlEnc {
-			return gbk2utf8( string(html) )
+			return GBK2UTF8( string(html) )
 		}
 	}
 	return string(html)
@@ -104,7 +113,7 @@ func randomBoundary() string { // src 里面生成随机字符串的函数，修
 }
 
 func PostFile(filePath string, postURL string) string { // http://www.golangnote.com/topic/124.html
-	fileName := mahonia.NewEncoder("gb18030").ConvertString( filepath.Base(filePath) ) // 文件名使用GBK编码发送，与curl保持一致
+	fileName := UTF82GBK( filepath.Base(filePath) ) // 文件名使用GBK编码发送，与curl保持一致
 	boundary := randomBoundary()
 
 	// 头 脚
