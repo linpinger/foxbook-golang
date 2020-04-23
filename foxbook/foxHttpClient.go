@@ -84,9 +84,9 @@ func html2utf8(html []byte, inURL string) string {
 	if strings.Contains(inURL, ".xsbiquge.") { // xxbiquge
 		return string(html)
 	}
-	if strings.Contains(inURL, "files.qidian.com/") { // 2017-6-5: 接口失效可删除
-		return GBK2UTF8( string(html) )
-	}
+//	if strings.Contains(inURL, "files.qidian.com/") { // 2017-6-5: 接口失效可删除
+//		return GBK2UTF8( string(html) )
+//	}
 	if strings.Contains(inURL, "qidian.com/") {
 		return string(html)
 	}

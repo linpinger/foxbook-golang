@@ -89,6 +89,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2020-04-23: 修改: 更新常用书架
 - 2019-12-16: 修改: xbiquge6.com to xsbiquge.com
 - 2019-12-13: 测试: GBK2UTF8的转换使用官方的包可以减小exe体积849K
 - 2019-12-13: 修改: 文件服务器检测UA包含Kindle时，添加样式将链接转为按钮，方便下载mobi

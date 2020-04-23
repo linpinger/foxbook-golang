@@ -59,18 +59,22 @@ func mapFmlName(inName string) string {
 
 	if "dj" == inName {
 		outName = "dajiadu.fml"
-	} else if "xx" == inName {
-		outName = "xxbiquge.fml"
+	} else if "wt" == inName {
+		outName = "wutuxs.fml"
+	} else if "mg" == inName {
+		outName = "meegoq.fml"
+	} else if "xs" == inName {
+		outName = "xsbiquge.fml"
 	} else if "13" == inName {
 		outName = "13xxs.fml"
+/*
 	} else if "xq" == inName {
 		outName = "xqqxs.fml"
 	} else if "pt" == inName {
 		outName = "piaotian.fml"
+*/
 	} else if "qd" == inName {
 		outName = "qidian.fml"
-	} else if "wt" == inName {
-		outName = "wutuxs.fml"
 	} else if "fb" == inName {
 		outName = "FoxBook.fml"
 	} else {
@@ -150,8 +154,8 @@ func main() {
 	flag.Parse()
 
 	if bVersion {
-		p("Version : 2019-12-16 public")
-		p("Compiler: go version go1.13 linux/amd64")
+		p("Version : 2020-04-23 public")
+		p("Compiler: go version go1.14.2 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [fmlPath]")
 		p("Example :")
 		p("\t", os.Args[0], "-pu http://127.0.0.1/f fileToPost.path")
