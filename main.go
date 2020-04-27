@@ -67,12 +67,10 @@ func mapFmlName(inName string) string {
 		outName = "xsbiquge.fml"
 	} else if "13" == inName {
 		outName = "13xxs.fml"
-/*
 	} else if "xq" == inName {
 		outName = "xqqxs.fml"
-	} else if "pt" == inName {
-		outName = "piaotian.fml"
-*/
+	} else if "ymx" == inName {
+		outName = "ymxxs.fml"
 	} else if "qd" == inName {
 		outName = "qidian.fml"
 	} else if "fb" == inName {
@@ -154,7 +152,7 @@ func main() {
 	flag.Parse()
 
 	if bVersion {
-		p("Version : 2020-04-23 public")
+		p("Version : 2020-04-27 public")
 		p("Compiler: go version go1.14.2 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [fmlPath]")
 		p("Example :")

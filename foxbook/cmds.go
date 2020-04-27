@@ -154,6 +154,11 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 			html = html2utf8( gethtml( "https://www.meegoq.com/u/", strings.Trim(cookie["meegoq"], "\n\r ") ), "https://www.meegoq.com/u/")
 			res = "(?smi)<li>.*?\"n\".*?<a [^>]*?>([^<]*)<.*?\"c\".*?<a href=\"([^\"]*)\""
 			siteNum = 43
+		case strings.Contains(firstBookURL, ".ymxxs.com") :
+			// 2020-04-27: 同 meegoq
+			html = html2utf8( gethtml( "https://www.ymxxs.com/u/", strings.Trim(cookie["ymxxs"], "\n\r ") ), "https://www.ymxxs.com/u/")
+			res = "(?smi)<li>.*?\"n\".*?<a [^>]*?>([^<]*)<.*?\"c\".*?<a href=\"([^\"]*)\""
+			siteNum = 43
 		case strings.Contains(firstBookURL, ".xsbiquge.") :
 			html = html2utf8( gethtml( "https://www.xsbiquge.com/bookcase.php", strings.Trim( cookie["xsbiquge"], "\n\r " ) ), "https://www.xsbiquge.com/bookcase.php")
 			html += html2utf8( gethtml( "https://www.xsbiquge.com/bookcase.php?page=2", strings.Trim( cookie["xsbiquge"], "\n\r " ) ), "https://www.xsbiquge.com/bookcase.php")
@@ -165,6 +170,10 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 			html = html2utf8( gethtml( "https://www.dajiadu8.com/modules/article/bookcase.php", strings.Trim( cookie["dajiadu8"], "\n\r " ) ), "https://www.dajiadu8.com/modules/article/bookcase.php")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
 			siteNum = 40
+		case strings.Contains(firstBookURL, ".xqqxs.") : // 同 dajiadu
+			html = html2utf8( gethtml( "https://www.xqqxs.com/modules/article/bookcase.php?delid=604", strings.Trim( cookie["xqqxs"], "\n\r " ) ), "https://www.xqqxs.com/modules/article/bookcase.php?classid=0")
+			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
+			siteNum = 17
 		case strings.Contains(firstBookURL, ".13xxs.") :
 			html = html2utf8( gethtml( "http://www.13xxs.com/modules/article/bookcase.php?classid=0", strings.Trim( cookie["13xxs"], "\n\r " ) ), "http://www.13xxs.com/modules/article/bookcase.php?classid=0")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*?/([0-9]*.html)\""
@@ -174,14 +183,6 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 			html = html2utf8( gethtml( "http://www.biquge.com.tw/modules/article/bookcase.php", strings.Trim( cookie["rawbiquge"], "\n\r " ) ), "http://www.biquge.com.tw/modules/article/bookcase.php")
 			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"([^\"]*)\""
 			siteNum = 20
-		case strings.Contains(firstBookURL, ".piaotian.") :
-			html = html2utf8( gethtml( "https://www.piaotian.com/modules/article/bookcase.php", strings.Trim( cookie["rawpiaotian"], "\n\r " ) ), "https://www.piaotian.com/modules/article/bookcase.php")
-			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
-			siteNum = 16
-		case strings.Contains(firstBookURL, ".xqqxs.") : // 同 dajiadu
-			html = html2utf8( gethtml( "http://www.xqqxs.com/modules/article/bookcase.php?delid=604", strings.Trim( cookie["rawxqqxs"], "\n\r " ) ), "http://www.xqqxs.com/modules/article/bookcase.php?delid=604")
-			res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
-			siteNum = 17
 */
 		default : // 不支持的书架，例如qidian
 			return getAllBookIDX(shelf) // 获取所有需更新的bookIDX
@@ -211,10 +212,8 @@ func getBookCase2GetBookIDX(shelf []Book, cookiePath string) []int { // 更新�
 						newpageurl += ".html"
 					case 42:
 						newpageurl += ".html"
-//					case 16:
-//						newpageurl += ".html"
-//					case 17:
-//						newpageurl += ".html"
+					case 17:
+						newpageurl += ".html"
 				}
 				nowBookAllPageStr = getBookAllPageStr( &(shelf[i]) )
 				if ! strings.Contains(nowBookAllPageStr, newpageurl + "|") { // newpageurl 不在本地列表中
