@@ -59,10 +59,9 @@
 **小提示:**
 - 把生成的exe重命名为http.exe，它就成了一个简单的http文件服务器:
   - http://127.0.0.1/ 可以看到当前目录
-  - http://127.0.0.1/fb/ 可以看到小说页面，如果当前目录存在 FoxBook.fml
   - http://127.0.0.1/f 这是上传文件的页面
+  - http://127.0.0.1/fb/ 可以看到小说页面，如果当前目录存在 FoxBook.fml
   - http://127.0.0.1/foxcgi/xxx.exe  CGI程序(当前目录下存在 foxcgi/xxx.exe, xxx.exe是一个cgi程序，可以用AHK_L版脚本来写)
-- 其他文件名，打开 http://127.0.0.1/ 就可以看到小说页面，如果当前目录存在 FoxBook.fml
 - foxbook-golang-x86.exe -h 可以查看命令行参数
 - 如果是服务器模式，默认跟目录为当前目录，默认端口为80(linux/mac下因权限问题需使用-p参数修改一下端口)
 
@@ -89,6 +88,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2020-05-09: 修改: 整理了一下命令行参数，添加了几个开关控制服务器功能及选项
 - 2020-04-27: 修改: 更新常用书架，添加ymxxs.com
 - 2020-04-23: 修改: 更新常用书架
 - 2019-12-16: 修改: xbiquge6.com to xsbiquge.com

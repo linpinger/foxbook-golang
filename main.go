@@ -7,110 +7,95 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 
 	"github.com/linpinger/foxbook-golang/foxbook"
 )
 
+// 全局变量
 var p = fmt.Println
-var isBinNameHTTP bool = false
-var cookiePath string
-var posDirList []string
 
-func findCookieFile() {
-	// 全局变量: cookiePath, posDirList
-	if ! foxbook.FileExist(cookiePath) {
+func findFile(fName string, posDirList[]string) string {
+	if "" == fName { return "" }
+
+	if ! foxbook.FileExist(fName) {
 		for _, ndp := range posDirList {
-			if foxbook.FileExist(ndp + cookiePath) {
-				cookiePath = ndp + cookiePath
+			if foxbook.FileExist(ndp + fName) {
+				fName = ndp + fName
 				break
 			}
 		}
 	}
-	if ! foxbook.FileExist(cookiePath) {
-		cookiePath = ""
-	}
-}
 
-func findFMLFile(fmlPath string) string {
-	// 全局变量: posDirList
-	if ! foxbook.FileExist(fmlPath) {
-		for _, ndp := range posDirList {
-			if foxbook.FileExist(ndp + fmlPath) {
-				fmlPath = ndp + fmlPath
-				break
-			}
-		}
-	}
-	if ! foxbook.FileExist(fmlPath) {
-		p( "Error: ", fmlPath, " Not Exist" )
-		fmlPath = ""
-		if ! isBinNameHTTP {
-			os.Exit(1)
-		}
-	}
-	return fmlPath
+	if ! foxbook.FileExist(fName) { fName = "" }
+	return fName
 }
 
 func mapFmlName(inName string) string {
-	outName := "FoxBook.fml"
+	var outName string
 
-	if "dj" == inName {
-		outName = "dajiadu.fml"
-	} else if "wt" == inName {
-		outName = "wutuxs.fml"
-	} else if "mg" == inName {
-		outName = "meegoq.fml"
-	} else if "xs" == inName {
-		outName = "xsbiquge.fml"
-	} else if "13" == inName {
-		outName = "13xxs.fml"
-	} else if "xq" == inName {
-		outName = "xqqxs.fml"
-	} else if "ymx" == inName {
-		outName = "ymxxs.fml"
-	} else if "qd" == inName {
-		outName = "qidian.fml"
-	} else if "fb" == inName {
-		outName = "FoxBook.fml"
-	} else {
-		outName = inName
+	switch inName {
+		case "dj":
+			outName = "dajiadu.fml"
+		case "wt":
+			outName = "wutuxs.fml"
+		case "mg":
+			outName = "meegoq.fml"
+		case "xs":
+			outName = "xsbiquge.fml"
+		case "13":
+			outName = "13xxs.fml"
+		case "xq":
+			outName = "xqqxs.fml"
+		case "ymx":
+			outName = "ymxxs.fml"
+		case "qd":
+			outName = "qidian.fml"
+		case "fb":
+			outName = "FoxBook.fml"
+		default:
+			outName = inName
 	}
+
 	return outName
 }
 
-func startHTTPServer(listenPort string, httpRootDir string, isFileServer bool, fmlPath string) {
-	foxbook.FoxHTTPVarInit(fmlPath, cookiePath, posDirList)
-	p("    HTTP Listen on Port: ", listenPort, "    PID:", os.Getpid())
-	p("    Root Dir: ", httpRootDir)
-
-	p("    Init fmlPath: ", fmlPath)
-	p("    Init Cookie:  ", cookiePath)
+func startHTTPServer(listenPort string, httpRootDir string, cookiePath string, posDirList []string, userAgentStr string, bUP bool, bFB bool, bCGI bool) {
+	foxbook.FoxHTTPVarInit(cookiePath, posDirList)
+	p("# Port:", listenPort, "            PID:", os.Getpid())
 
 	addrs, errl := net.InterfaceAddrs() // 获取本地IP
 	if errl == nil {
 		for _, addr := range addrs {
-			p("    Local IP:", addr.String())
+			if strings.Contains(addr.String(), ":") { continue } // ipv6
+			if strings.Contains(addr.String(), "127.0.0.1") { continue }
+			p("# IP:", addr.String())
 		}
 	} else {
-		p("Get Local IP Error:", errl)
+		fmt.Fprintln(os.Stderr, "Get Local IP Error:", errl)
 	}
 
-	if isFileServer {
-//		http.Handle("/", http.FileServer(http.Dir(httpRootDir)))
-		http.Handle("/", foxbook.StaticFileServer(httpRootDir) ) // 静态文件处理
+	p("# Root Dir:", httpRootDir)
+	p("# Cookie:", cookiePath)
+	p("# bUP =", bUP, ", bFB =", bFB, ", bCGI =", bCGI)
+	p("\nDD HH:MM:SS IP:Port -> URL\n")
+
+//	http.Handle("/", http.FileServer(http.Dir(httpRootDir)))
+	http.Handle("/", foxbook.StaticFileServer(httpRootDir, userAgentStr) ) // 静态文件处理
+	if bUP {
 		http.HandleFunc("/f", foxbook.PostFileServer)  // 上传文件处理
+	}
+	if bCGI {
 		http.HandleFunc("/foxcgi/", foxbook.CGIServer) // cgi处理
+	}
+	if bFB {
 		http.HandleFunc("/fb/", foxbook.FoxBookServer) // 小说管理，以上可按需注释掉 todo
-	} else {
-		http.HandleFunc("/", foxbook.FoxBookServer) // 小说管理，以上可按需注释掉 todo
 	}
 
 	err := http.ListenAndServe(":" + listenPort, nil)
 	if err != nil {
-		p("ListenAndServe: ", err)
+		fmt.Fprintln(os.Stderr, "ListenAndServe: ", err)
 	}
 }
 
@@ -128,101 +113,89 @@ func fmlsToMobi(fmlDir string) {
 func main() {
 
 	// 根据 程序名称 来确定功能
-	nowExeName := filepath.Base(os.Args[0])
-	if "http" == nowExeName || "http.exe" == nowExeName { isBinNameHTTP = true }
+//	var isBinNameHTTP bool = false
+//	nowExeName := filepath.Base(os.Args[0])
+//	if "http" == nowExeName || "http.exe" == nowExeName { isBinNameHTTP = true }
 
-	var fmlPath, postURL string
-	// postURL 依赖: fmlPath
-	flag.StringVar(&postURL, "pu", "http://127.0.0.0/f", "POST URL used to post a File")
+	var fmlPath, cookiePath string
 	flag.StringVar(&cookiePath, "c", "FoxBook.cookie", "cookie file Path, if blank then not download bookcase")
-	var bServer, bVersion bool
-	var listenPort, rootDir string
-	var ebookIDX int
-	var ebookSavePath string
-	var qidianID string
 
-	flag.StringVar(&qidianID, "qd2m", "0", "qidian epub to mobi(if not exist, download first)")
-	flag.IntVar(&ebookIDX, "idx", -1, "which idx(base 0) book to mobi/epub")
-	flag.StringVar(&ebookSavePath, "to", "", "cmd: mobi/epub save path or dir2mobi or automobi or autoepub")
-
-	flag.BoolVar(&bServer, "l", false, "is server ? (default false)") // Debug
+	// switch
+	var bVersion, bOpenUpload, bOpenFB, bOpenCGI bool
 	flag.BoolVar(&bVersion, "v", false, "Version info about this Binary")
+	flag.BoolVar(&bOpenUpload, "up", true, "Browse /f to show upload page")
+	flag.BoolVar(&bOpenFB, "fb", false, "Browse /fb to show shelf")
+	flag.BoolVar(&bOpenCGI, "cgi", false, "Open CGI Func, Put bin in /foxcgi/")
+
+	// tool: postURL 依赖: fmlPath
+	var postURL, ebookSavePath string
+	flag.StringVar(&postURL, "pu", "http://127.0.0.0/f", "Tool: POST a File to This URL")
+	flag.StringVar(&ebookSavePath, "to", "", "cmd: mobi/epub save path or dir2mobi or automobi or autoepub")
+	var ebookIDX int
+	flag.IntVar(&ebookIDX, "idx", -1, "which idx(base 0) book to mobi/epub")
+
+	// config
+	var listenPort, rootDir, userAgentStr string
 	flag.StringVar(&listenPort, "p", "80", "server: listen port")
 	flag.StringVar(&rootDir, "d", ".", "server: root Dir")
-	flag.Parse()
+	flag.StringVar(&userAgentStr, "U", "", "server: only this UserAgent can show Static Files")
 
-	if bVersion {
-		p("Version : 2020-04-27 public")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [args] [filePath]\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.Parse() // 处理参数
+
+// start
+
+	if bVersion { // -v
+		p("Version : 2020-05-09 public")
 		p("Compiler: go version go1.14.2 linux/amd64")
-		p("Usage   :", os.Args[0], "[args] [fmlPath]")
+		p("Usage   :", os.Args[0], "[args] [filePath]")
 		p("Example :")
 		p("\t", os.Args[0], "-pu http://127.0.0.1/f fileToPost.path")
 		p("\t", os.Args[0], "-to all_xx.mobi xx.fml")
 		p("\t", os.Args[0], "-to xx.mobi -idx 0 all.fml")
 		p("\t", os.Args[0], "-to dir2mobi -d /dev/shm/00/")
-		p("\t", os.Args[0], "-qd2m 1939238")
-		p("\t", os.Args[0], "-qd2m 1939238 -to \"xxxx_#qidianid#_#bookname#_#bookauthor#.epub\"")
-		if isBinNameHTTP {
-			p("\n\tNow in HTTP Mod, No Use of CMD Functions: update, toEbook\n\tBut You Can Do That in Browser /fb/\n\tOr Rename This Bin to fb.exe\n")
-		}
-		os.Exit(1)
+		os.Exit(0)
+	}
+	if "dir2mobi" == ebookSavePath {
+		fmlsToMobi(rootDir)
+		os.Exit(0)
 	}
 
-	fileCount := len( flag.Args() )
-	if 0 == fileCount {
-		fmlPath = "FoxBook.fml"
-	} else if 1 == fileCount { // fml缩写处理
-		fmlPath = mapFmlName( flag.Arg(0) )
-	} else {
-		fmlPath = flag.Arg(0)
-		p( "Error: cmd parse error" )
-	}
-
-	// 查找fml,cookie路径
-	posDirList = []string {"./", "/home/fox/bin/", "/root/bin/", "/dev/shm/00/", "/dev/shm/00/foxcgi/", "/dev/shm/00/cgi-bin/"} // 非win的路径，以后可以增加
+	// 查找fml,cookie路径，考虑不存在的异常, 模式: 命令或服务器
+	var posDirList = []string {"./", "/home/fox/bin/", "/root/bin/", "/dev/shm/00/", "/dev/shm/00/foxcgi/", "/dev/shm/00/cgi-bin/"} // 非win的路径，以后可以增加
 	if "windows" == runtime.GOOS {
-		posDirList = []string {"./", "C:/bin/sqlite/FoxBook/", "D:/bin/sqlite/FoxBook/", "C:/bin/sqlite/FoxBook/Y/", "D:/bin/sqlite/FoxBook/Y/"}
+		posDirList = []string {"./", "C:/bin/sqlite/FoxBook/", "D:/bin/sqlite/FoxBook/", "T:/x/", "T:/x/FML/"}
 	}
+	cookiePath = findFile(cookiePath, posDirList)
 
-	// Start
-	if "0" != qidianID { // qidian Epub 2 Mobi
-		if ! strings.Contains(qidianID, ".epub") {
-			if foxbook.DownFile("http://download.qidian.com/epub/" + qidianID + ".epub", qidianID + ".epub") < 999 {
-				p("Error: epub size too small, means not exist on qidian server")
+	fileCount := flag.NArg() // 处理后的参数个数，一般是文件路径
+	switch fileCount {
+		case 0: // 无需文件的处理
+			startHTTPServer(listenPort, rootDir, cookiePath, posDirList, userAgentStr, bOpenUpload, bOpenFB, bOpenCGI) // 服务器
+		case 1: // 一个文件的处理
+			fmlPath = mapFmlName( flag.Arg(0) )
+			fmlPath = findFile(fmlPath, posDirList)
+
+			if "http://127.0.0.0/f" != postURL { // 发送文件
+				if foxbook.FileExist(fmlPath) {
+					p( foxbook.PostFile(fmlPath, postURL) )
+				}
 				os.Exit(0)
 			}
-			qidianID = qidianID + ".epub"
-		}
-		foxbook.QidianEpub2Mobi(qidianID, ebookSavePath)
-		os.Exit(0)
+			if "" != ebookSavePath { // to mobi/epub
+				foxbook.ExportEBook( ebookSavePath, fmlPath, ebookIDX)
+				os.Exit(0)
+			}
+
+			foxbook.UpdateShelf( fmlPath, cookiePath ) // 更新fml
+			os.Exit(0)
+		default:
+			fmt.Fprintln(os.Stderr, "Error: cmd parse error")
+			os.Exit(1)
 	}
 
-	if "" != cookiePath {
-		findCookieFile()
-	}
-	fmlPath = findFMLFile(fmlPath)
-
-	if "http://127.0.0.0/f" != postURL { // 发送文件
-		if foxbook.FileExist(fmlPath) {
-			p( foxbook.PostFile(fmlPath, postURL) )
-		}
-		os.Exit(0)
-	}
-
-	if bServer || isBinNameHTTP { // 服务器
-		startHTTPServer(listenPort, rootDir, isBinNameHTTP, fmlPath)
-	} else if "" != ebookSavePath { // to mobi/epub
-		if "dir2mobi" == ebookSavePath {
-			fmlsToMobi(rootDir)
-		} else {
-			foxbook.ExportEBook( ebookSavePath, fmlPath, ebookIDX)
-		}
-	} else { // 更新模式
-		foxbook.UpdateShelf( fmlPath, cookiePath )
-	}
-
-//	var aaa int
-//	fmt.Scanf("%c",&aaa)
-}
-
+} // func main end
 

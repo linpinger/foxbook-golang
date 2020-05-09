@@ -16,15 +16,14 @@ import (
 
 // 全局变量，避免多次载入
 var Shelf []Book = nil
-var ShelfPath string = ""
+var ShelfPath string = "FoxBook.fml"
 var CookiePath string = ""
 var PosDirList []string
 var fp = fmt.Fprint
 var fpf = fmt.Fprintf
 // var spf = fmt.Sprintf
 
-func FoxHTTPVarInit(fmlPath, cookieFilePath string, posibleDirList []string) { // 全局变量初始化
-	ShelfPath = fmlPath
+func FoxHTTPVarInit(cookieFilePath string, posibleDirList []string) { // 全局变量初始化
 	Shelf = loadFML( ShelfPath )
 	CookiePath = cookieFilePath
 	PosDirList = posibleDirList
@@ -403,7 +402,7 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 <p></p>
 <hr>
 Curl Upload Example(File Size Limit: 99M):<br/>
-curl http://127.0.0.1:55555/f -F f=@"hello.txt"
+curl http://127.0.0.1:8080/f -F f=@"hello.txt"
 
 <hr>
 <form enctype="multipart/form-data" action="/f" method="POST">
@@ -441,20 +440,33 @@ func CGIServer(w http.ResponseWriter, r *http.Request) {
 
 type StaticFileHandler struct {
 	root string
+	userAgentStr string
 }
 
-func StaticFileServer(rootDir string) http.Handler {
-	return &StaticFileHandler{rootDir}
+func StaticFileServer(rootDir string, userAgentStr string) http.Handler {
+	return &StaticFileHandler{rootDir, userAgentStr}
 }
 
 func (sfh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
+
 	fi, err := os.Stat(sfh.root + r.URL.Path)
 	if err != nil {
 		http.NotFound(w, r)
+		p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI, ": NotFound :", r.UserAgent() )
 		return
 	}
 	if fi.IsDir() {
+		if sfh.userAgentStr != "" { // 判断UA
+			if ! strings.Contains(r.UserAgent(), sfh.userAgentStr) {
+				http.NotFound(w, r)
+				p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI, ": UA_NO :", r.UserAgent() )
+				return
+			}
+			p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI, ": UA_OK :", r.UserAgent() )
+		} else {
+			p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
+		}
+
 		rd, err := ioutil.ReadDir(sfh.root + r.URL.Path)
 		if err != nil {
 			http.NotFound(w, r)
@@ -462,11 +474,8 @@ func (sfh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 		w.Header().Add("Content-Type", "text/html")
 		w.WriteHeader(200)
-		// fmt.Println(r.UserAgent())
-		addStyle := ""
-		if strings.Contains(r.UserAgent(), "Kindle") {
-			addStyle = "\na { width: 40%%; height: 35px; line-height: 35px; padding: 10px; text-align: center; color: #000000; border: 1px solid #000000; border-radius: 5px; display: inline-block; font-size: 1rem; }\n"
-		}
+
+		addStyle := "\na { width: 40%%; height: 35px; line-height: 35px; padding: 10px; text-align: center; color: #000000; border: 1px solid #000000; border-radius: 5px; display: inline-block; font-size: 1rem; }\n"
 		fpf(w, "<!DOCTYPE html>\n<html>\n<head>\n\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n\t<meta name=\"viewport\" content=\"width=device-width; initial-scale=1.0; minimum-scale=0.1; maximum-scale=3.0; \"/>\n\t<title>Index Of %s</title>\n\t<style>\n\t\tli { line-height: 150%% }\n%s\t</style>\n</head>\n<body>\n\n<h2>Index Of %s</h2>\n<hr>\n<ol>\n\n", r.URL.Path, addStyle, r.URL.Path)
 
 		for _, fi := range rd {
@@ -478,19 +487,21 @@ func (sfh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 		fp(w, "\n</ol>\n<hr>\n</body>\n</html>\n")
 	} else {
+		p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
 		http.ServeFile(w, r, sfh.root + r.URL.Path)
 	}
 }
 
 /*
+
 func main() {
 	var listenPort, httpRootDir string
-	flag.StringVar(&listenPort, "p", "55555", "监听端口号")
+	flag.StringVar(&listenPort, "p", "8080", "监听端口号")
 	flag.StringVar(&httpRootDir, "d", ".", "根路径")
 	flag.Parse()
 
-	// 客户可以: curl http://127.0.0.1:55555/f -F f=@"X:\fskd\你好 skd.xxx"
-	// 或访问: http://127.0.0.1:55555/f
+	// 客户可以: curl http://127.0.0.1:8080/f -F f=@"X:\fskd\你好 skd.xxx"
+	// 或访问: http://127.0.0.1:8080/f
 	fmt.Printf("    HTTP Listen on Port: %s\n    Root Dir: %s\n", listenPort, httpRootDir)
 //	http.Handle("/", http.FileServer(http.Dir(httpRootDir)))
 	http.Handle("/", StaticFileServer(httpRootDir) )
