@@ -98,6 +98,8 @@ func getBookNewPages(book *Book) { // 下载toc并写入新章节
 	html := html2utf8( gethtml(nowBookURL, ""), nowBookURL)
 	if isQidanTOCURL_Touch7_Ajax(nowBookURL) {
 		bc = qidian_GetTOC_Touch7_Ajax(html)
+	} else if strings.Contains(string(book.delurl), "|") {
+		bc = getTOCLast( html )
 	} else {
 		bc = getTOC( html )
 	}

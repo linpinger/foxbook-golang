@@ -8,6 +8,43 @@ import (
 
 // var p = fmt.Println
 
+func getTOCLast(html string) [][]string {
+	lastCount := 80  // 取倒数80个链接
+
+	// 链接列表 lks
+	reLink, _ := regexp.Compile("(?smi)<a[^>]*?href=[\"|']([^\"']*?)[\"|'][^>]*?>([^<]*)<")
+	lks := reLink.FindAllStringSubmatch(html, -1)
+	if nil == lks { return nil }
+
+	lastIDX := len(lks) - 1
+	firstIDX := lastIDX - lastCount
+	firstURLLen := len( lks[firstIDX][1] )
+	firstURLLenB := firstURLLen + 1 // URL长度余量
+
+	var nowLen, endIDX int
+	bAdded := false
+	for i, lk := range lks {
+		if i < firstIDX { continue }
+		nowLen = len(lk[1])
+		if bAdded {
+			if nowLen != firstURLLenB {
+				break
+			}
+		} else {
+			if nowLen != firstURLLen {
+				if nowLen != firstURLLenB {
+					break
+				} else {
+					bAdded = true
+				}
+			}
+		}
+		endIDX = i
+	}
+
+	return lks[firstIDX:1+endIDX]
+}
+
 func getTOC(html string) [][]string {
 	var nowLen, nowCount int
 	var isKeyExist bool

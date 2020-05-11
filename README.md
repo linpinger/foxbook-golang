@@ -88,6 +88,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2020-05-11: 修改: 针对追更的书，取倒数80个链接getTOCLast
 - 2020-05-09: 修改: 整理了一下命令行参数，添加了几个开关控制服务器功能及选项
 - 2020-04-27: 修改: 更新常用书架，添加ymxxs.com
 - 2020-04-23: 修改: 更新常用书架

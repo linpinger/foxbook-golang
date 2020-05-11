@@ -149,7 +149,7 @@ func main() {
 // start
 
 	if bVersion { // -v
-		p("Version : 2020-05-09 public")
+		p("Version : 2020-05-11 public")
 		p("Compiler: go version go1.14.2 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [filePath]")
 		p("Example :")
