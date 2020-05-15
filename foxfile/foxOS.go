@@ -1,9 +1,29 @@
-package foxbook
+package foxfile
 
 import (
 	"io"
 	"os"
 )
+
+func FindFileInDirList(fName string, posDirList []string) string {
+	if "" == fName {
+		return ""
+	}
+
+	if !FileExist(fName) {
+		for _, ndp := range posDirList {
+			if FileExist(ndp + fName) {
+				fName = ndp + fName
+				break
+			}
+		}
+	}
+
+	if !FileExist(fName) {
+		fName = ""
+	}
+	return fName
+}
 
 func FileExist(filename string) bool {
 	_, err := os.Stat(filename)
@@ -23,4 +43,3 @@ func FileCopy(srcName, dstName string) (written int64, err error) {
 	defer dst.Close()
 	return io.Copy(dst, src)
 }
-

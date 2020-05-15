@@ -1,30 +1,51 @@
-package foxbook
+package site
 
 import (
 	"regexp"
 	"strings"
 )
 
-
 // var p = fmt.Println
 
-func getTOCLast(html string) [][]string {
-	lastCount := 80  // 取倒数80个链接
+func TestHtmlOK(html string) bool {
+	isOK := false
+	if len(html) > 3 {
+		lowCase := strings.ToLower(html)
+		if strings.Contains(lowCase, "</html>") { // html 下载完毕
+			isOK = true
+		} else {
+			if !strings.Contains(lowCase, "doctype") { // json
+				isOK = true
+			}
+		}
+	}
+	return isOK
+}
+
+func GetTOCLast(html string) [][]string {
+	if !TestHtmlOK(html) {
+		return nil
+	}
+	lastCount := 80 // 取倒数80个链接
 
 	// 链接列表 lks
 	reLink, _ := regexp.Compile("(?smi)<a[^>]*?href=[\"|']([^\"']*?)[\"|'][^>]*?>([^<]*)<")
 	lks := reLink.FindAllStringSubmatch(html, -1)
-	if nil == lks { return nil }
+	if nil == lks {
+		return nil
+	}
 
 	lastIDX := len(lks) - 1
 	firstIDX := lastIDX - lastCount
-	firstURLLen := len( lks[firstIDX][1] )
+	firstURLLen := len(lks[firstIDX][1])
 	firstURLLenB := firstURLLen + 1 // URL长度余量
 
 	var nowLen, endIDX int
 	bAdded := false
 	for i, lk := range lks {
-		if i < firstIDX { continue }
+		if i < firstIDX {
+			continue
+		}
 		nowLen = len(lk[1])
 		if bAdded {
 			if nowLen != firstURLLenB {
@@ -42,10 +63,13 @@ func getTOCLast(html string) [][]string {
 		endIDX = i
 	}
 
-	return lks[firstIDX:1+endIDX]
+	return lks[firstIDX : 1+endIDX]
 }
 
-func getTOC(html string) [][]string {
+func GetTOC(html string) [][]string {
+	if !TestHtmlOK(html) {
+		return nil
+	}
 	var nowLen, nowCount int
 	var isKeyExist bool
 
@@ -67,29 +91,29 @@ func getTOC(html string) [][]string {
 			nowCount = 1
 			mapLenCount[nowLen] = 1
 		}
-//		p(lk[1], lk[2])
+		//		p(lk[1], lk[2])
 	}
 
 	// mapLenCount 获取 maxLen
 	var maxLen, maxCount int = 0, 0
 	for k, v := range mapLenCount {
-		if ( v > maxCount ) {
+		if v > maxCount {
 			maxCount = v
 			maxLen = k
 		}
-//		p(k, "=", v)
+		//		p(k, "=", v)
 	}
-//	p("maxLen =", maxLen, "  maxCount =", maxCount)
+	//	p("maxLen =", maxLen, "  maxCount =", maxCount)
 	var halfPos int = len(lks) / 2 // lks 中间点
-//	p(halfPos)
+	//	p(halfPos)
 	// 中间往前找开始点
 	startLen := maxLen - 1 // 边界点长度
-	endLen := maxLen + 1 // 结束边界点长度
-	startIDX := halfPos // 开始索引，包含
+	endLen := maxLen + 1   // 结束边界点长度
+	startIDX := halfPos    // 开始索引，包含
 	prevLen := len(lks[halfPos][1])
-	for i := halfPos; i >= 0 ; i-- {
+	for i := halfPos; i >= 0; i-- {
 		nowLen = len(lks[i][1])
-		if nowLen == prevLen  {
+		if nowLen == prevLen {
 			startIDX = i
 			prevLen = nowLen
 			continue
@@ -101,14 +125,14 @@ func getTOC(html string) [][]string {
 			break
 		}
 	}
-//	p("startIDX =", startIDX, "  startURL =", lks[startIDX][1], "  startName =", lks[startIDX][2])
+	//	p("startIDX =", startIDX, "  startURL =", lks[startIDX][1], "  startName =", lks[startIDX][2])
 	// 中间往后找结束点
-	endIDX := halfPos    // 结束索引，包含
+	endIDX := halfPos // 结束索引，包含
 	prevLen = len(lks[halfPos][1])
 	allIDX := len(lks) - 1
-	for i := halfPos; i <= allIDX ; i++ {
+	for i := halfPos; i <= allIDX; i++ {
 		nowLen = len(lks[i][1])
-		if nowLen == prevLen  {
+		if nowLen == prevLen {
 			endIDX = i
 			prevLen = nowLen
 			continue
@@ -120,12 +144,12 @@ func getTOC(html string) [][]string {
 			break
 		}
 	}
-//	p("endIDX =", endIDX, "  endURL =", lks[endIDX][1], "  endName =", lks[endIDX][2])
+	//	p("endIDX =", endIDX, "  endURL =", lks[endIDX][1], "  endName =", lks[endIDX][2])
 
-	return lks[startIDX:1+endIDX]
+	return lks[startIDX : 1+endIDX]
 }
 
-func getContent(html string) string {
+func GetContent(html string) string {
 	reBody, _ := regexp.Compile("(?smi)<body[^>]*?>(.*)</body>")
 	bd := reBody.FindStringSubmatch(html)
 	if nil != bd {
@@ -184,12 +208,12 @@ func getContent(html string) string {
 	return html
 }
 
-func isQidanTOCURL_Touch7_Ajax(iURL string) bool {
+func IsQidanTOCURL_Touch7_Ajax(iURL string) bool {
 	// https://m.qidian.com/majax/book/category?bookId=1016319872
 	return strings.Contains(iURL, "m.qidian.com/majax/book/category")
 }
 
-func qidian_GetTOC_Touch7_Ajax(jsonStr string) [][]string {
+func Qidian_GetTOC_Touch7_Ajax(jsonStr string) [][]string {
 	reID, _ := regexp.Compile("(?i)\"bookId\":\"([0-9]+)\",")
 	mID := reID.FindStringSubmatch(jsonStr)
 
@@ -203,25 +227,25 @@ func qidian_GetTOC_Touch7_Ajax(jsonStr string) [][]string {
 	var olks [][]string // [] ["", pageurl, pagename]
 	for _, lk := range lks {
 		if "1" == lk[3] {
-			olks = append(olks, []string{"", qidian_getContentURL_Touch7_Ajax(lk[2], mID[1]), lk[1]})
+			olks = append(olks, []string{"", Qidian_getContentURL_Touch7_Ajax(lk[2], mID[1]), lk[1]})
 		} else {
-			olks = append(olks, []string{"", qidian_getContentURL_Touch7_Ajax(lk[2], mID[1]), "VIP: " + lk[1]})
+			olks = append(olks, []string{"", Qidian_getContentURL_Touch7_Ajax(lk[2], mID[1]), "VIP: " + lk[1]})
 			break
 		}
 	}
 	return olks
 }
 
-func isQidanContentURL_Touch7_Ajax(iURL string) bool {
+func IsQidanContentURL_Touch7_Ajax(iURL string) bool {
 	// https://m.qidian.com/majax/chapter/getChapterInfo?bookId=1015209014&chapterId=462636481
 	return strings.Contains(iURL, "m.qidian.com/majax/chapter/getChapterInfo")
 }
 
-func qidian_getContentURL_Touch7_Ajax(pageID string, bookID string) string {
+func Qidian_getContentURL_Touch7_Ajax(pageID string, bookID string) string {
 	return "https://m.qidian.com/majax/chapter/getChapterInfo?bookId=" + bookID + "&chapterId=" + pageID
 }
 
-func qidian_GetContent_Touch7_Ajax(jsonStr string) string {
+func Qidian_GetContent_Touch7_Ajax(jsonStr string) string {
 	reID, _ := regexp.Compile("(?smi)\"content\":\"([^\"]+)\",")
 	fs := reID.FindStringSubmatch(jsonStr)
 	if nil != fs {

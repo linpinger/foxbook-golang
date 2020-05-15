@@ -1,9 +1,10 @@
-package foxbook
+package server
 
 import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/cgi"
 	"os"
@@ -12,37 +13,51 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/linpinger/foxbook-golang/foxhttp"
+
+	"github.com/linpinger/foxbook-golang/cmd"
+	"github.com/linpinger/foxbook-golang/fml"
+	"github.com/linpinger/foxbook-golang/foxfile"
 )
 
-// 全局变量，避免多次载入
-var Shelf []Book = nil
+// FoxBook Server全局变量，避免多次载入
+
+var Shelf *fml.Shelf = nil
 var ShelfPath string = "FoxBook.fml"
 var CookiePath string = ""
 var PosDirList []string
+
 var fp = fmt.Fprint
 var fpf = fmt.Fprintf
+
 // var spf = fmt.Sprintf
 
-func FoxHTTPVarInit(cookieFilePath string, posibleDirList []string) { // 全局变量初始化
-	Shelf = loadFML( ShelfPath )
-	CookiePath = cookieFilePath
-	PosDirList = posibleDirList
+var p = log.Println
+
+/*
+func init() {
+//	log.SetFlags( log.Ltime | log.Lmicroseconds | log.Lshortfile ) // log.LstdFlags  DEBUG
+	log.SetFlags(log.Ltime)
+	log.SetPrefix("- ")
+}
+*/
+func SetLogPath(logPath string) {
+	if "" != logPath {
+		fLog, _ := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+		// defer fLog.Close()
+		log.SetOutput(fLog)
+	}
 }
 
 func switchShelf(fmlPath string) {
 	ShelfPath = fmlPath
-	Shelf = loadFML( ShelfPath )
-}
-
-func clearBook(bookIDX int) {
-	newDelURL := SimplifyDelList( getBookAllPageStr( &(Shelf[bookIDX]) ) ) // 获取某书的所有章节列表字符串 并精简
-	Shelf[bookIDX].delurl = []byte(newDelURL)
-	Shelf[bookIDX].chapters = nil
+	Shelf = fml.NewShelf(ShelfPath)
 }
 
 func lsDirFML(dirName string) []string {
 	var fmlList []string
-	if FileExist(dirName) {
+	if foxfile.FileExist(dirName) {
 		fis, _ := ioutil.ReadDir(dirName)
 		for _, fi := range fis {
 			if strings.HasSuffix(fi.Name(), ".fml") {
@@ -65,7 +80,7 @@ func getShelfListHtml() string {
 				if nowFML == nowShelfName {
 					html += " <b>" + nowFML + "</b>"
 				} else {
-					html += spf(" <a href=\"?a=fswitchsh&f=%s%s&t=%d\">%s</a>", nowDir, nowFML, nowUnixTime, nowFML)
+					html += fmt.Sprintf(" <a href=\"?a=fswitchsh&f=%s%s&t=%d\">%s</a>", nowDir, nowFML, nowUnixTime, nowFML)
 				}
 			}
 			html += "<br>\n"
@@ -169,22 +184,41 @@ var HtmlFoot string = `
 
 `
 
-func FoxBookServer(w http.ResponseWriter, r *http.Request) {
-	p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
-	if strings.HasSuffix(r.RequestURI, ".mobi") || strings.HasSuffix(r.RequestURI, ".epub" ) { // 文件下载
-		http.ServeFile(w, r, filepath.Dir(ShelfPath) + string(os.PathSeparator) + filepath.Base(r.URL.Path) )
+type FoxBookHandler struct{}
+
+func FoxBookServer(shelfPath string, cookieFilePath string, posibleDirList []string) http.Handler {
+	ShelfPath = shelfPath
+	if foxfile.FileExist(ShelfPath) {
+		Shelf = fml.NewShelf(ShelfPath)
+	}
+	CookiePath = cookieFilePath
+	PosDirList = posibleDirList
+	return &FoxBookHandler{}
+}
+
+func (fbh *FoxBookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// p(time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI)
+	p(r.RemoteAddr, "->", r.RequestURI)
+	if strings.HasSuffix(r.RequestURI, ".mobi") || strings.HasSuffix(r.RequestURI, ".epub") { // 文件下载
+		http.ServeFile(w, r, filepath.Dir(ShelfPath)+string(os.PathSeparator)+filepath.Base(r.URL.Path))
 		return
 	}
 	action := r.FormValue("a")
-	if "" == action { action = "fls" }
+	if "" == action {
+		action = "fls"
+	}
 
 	bookIDXStr := r.FormValue("b")
 	var bookIDX int = -1
-	if "" != bookIDXStr { bookIDX, _ = strconv.Atoi(bookIDXStr) }
+	if "" != bookIDXStr {
+		bookIDX, _ = strconv.Atoi(bookIDXStr)
+	}
 
 	pageIDXStr := r.FormValue("c")
 	var pageIDX int = -1
-	if "" != pageIDXStr { pageIDX, _ = strconv.Atoi(pageIDXStr) }
+	if "" != pageIDXStr {
+		pageIDX, _ = strconv.Atoi(pageIDXStr)
+	}
 
 	// 命令: 会修改命令
 	if "fswitchsh" == action { // 切换shelf
@@ -192,15 +226,15 @@ func FoxBookServer(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, r.URL.Path, http.StatusMovedPermanently)
 		return
 	} else if "fups" == action { // 更新
-		UpdateShelf( ShelfPath, CookiePath )
+		cmd.UpdateShelf(ShelfPath, CookiePath)
 		http.Redirect(w, r, r.URL.Path, http.StatusMovedPermanently)
 		return
 	} else if "fcb" == action { // 清空单本
-		clearBook(bookIDX)
+		Shelf.ClearBook(bookIDX)
 		http.Redirect(w, r, r.URL.Path, http.StatusMovedPermanently)
 		return
 	} else if "fsavesh" == action { // 保存修改
-		saveShelf(Shelf, ShelfPath) // 保存shelf
+		Shelf.Save(ShelfPath) // 保存shelf
 		http.Redirect(w, r, "?", http.StatusMovedPermanently)
 		return
 	} else if "ftom" == action || "ftop" == action { // 转mobi
@@ -218,71 +252,71 @@ func FoxBookServer(w http.ResponseWriter, r *http.Request) {
 			ffmt := ffs.ModTime()
 			if mmt.Before(ffmt) {
 				os.Remove(mobiPath)
-				ExportEBook(mobiPath, ShelfPath, -1)
+				cmd.FML2EBook(mobiPath, ShelfPath, -1)
 			}
 		} else {
-			ExportEBook(mobiPath, ShelfPath, -1)
+			cmd.FML2EBook(mobiPath, ShelfPath, -1)
 		}
 
-		http.Redirect(w, r, strings.Replace(r.URL.Path + "/" + mobiName, "//", "/", -1), http.StatusMovedPermanently)
+		http.Redirect(w, r, strings.Replace(r.URL.Path+"/"+mobiName, "//", "/", -1), http.StatusMovedPermanently)
 		return
 	}
 
 	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(200)
 
-//	nowUA := r.Header.Get("User-Agent") // 根据UA头判断是否包含 kindle 字符串
+	//	nowUA := r.Header.Get("User-Agent") // 根据UA头判断是否包含 kindle 字符串
 
 	fp(w, HtmlHead)
 	if "fls" == action { // 列表
-		fp(w, "\t<title>Shelf</title>\n\t<style>\n" , StyleLI , StyleYY , "\t</style>\n" , HtmlHeadBodyC)
+		fp(w, "\t<title>Shelf</title>\n\t<style>\n", StyleLI, StyleYY, "\t</style>\n", HtmlHeadBodyC)
 
 		fp(w, getShelfListHtml())
 		nowUnixTime := time.Now().Unix()
 		fpf(w, "<br>　%s: <a class=\"yy\" href=\"?a=fups&t=%d\">更新Shelf</a>　　<a class=\"yy\" href=\"?a=fla&t=%d\">显示所有章节</a>　　<a class=\"yy\" href=\"?a=ftop&t=%d\">转Epub</a>　<a class=\"yy\" href=\"?a=ftom&t=%d\">转Mobi</a>　　<a class=\"yy\" href=\"?a=fsavesh&t=%d\">保存</a><br>\n", filepath.Base(ShelfPath), nowUnixTime, nowUnixTime, nowUnixTime, nowUnixTime, nowUnixTime)
 
 		fp(w, "<ol>\n")
-		for i, book := range Shelf {
-			fpf(w, "\t<li><a href=\"?a=flb&b=%d\">%s</a> (%d) <a class=\"yy\" href=\"?a=fcb&b=%d&t=%d\">清空本书</a></li>\n", i, book.bookname, len(book.chapters), i, nowUnixTime )
+		for i, book := range Shelf.Books {
+			fpf(w, "\t<li><a href=\"?a=flb&b=%d\">%s</a> (%d) <a class=\"yy\" href=\"?a=fcb&b=%d&t=%d\">清空本书</a></li>\n", i, book.Bookname, len(book.Chapters), i, nowUnixTime)
 		}
 		fp(w, "</ol>\n")
 
 		fp(w, HtmlFoot)
 	} else if "fla" == action { // 所有
-		fp(w, "\t<title>TOC</title>\n\t<style>\n" , StyleLI , "\t</style>\n" , HtmlHeadBodyC)
+		fp(w, "\t<title>TOC</title>\n\t<style>\n", StyleLI, "\t</style>\n", HtmlHeadBodyC)
 
-		for i, book := range Shelf {
-			fpf(w, "<b>%s</b><br>\n<ol>\n" , book.bookname)
-			for j, page := range book.chapters {
-				fpf(w, "\t<li><a href=\"?a=flp&b=%d&c=%d\">%s</a> (%s)</li>\n", i, j, page.pagename, page.size)
+		for i, book := range Shelf.Books {
+			fpf(w, "<b>%s</b><br>\n<ol>\n", book.Bookname)
+			for j, page := range book.Chapters {
+				fpf(w, "\t<li><a href=\"?a=flp&b=%d&c=%d\">%s</a> (%s)</li>\n", i, j, page.Pagename, page.Size)
 			}
 			fp(w, "</ol>\n")
 		}
 
 		fp(w, HtmlFoot)
 	} else if "flb" == action { // 单本
-		bookName := string(Shelf[bookIDX].bookname)
-		fp(w, "\t<title>TOC of " + bookName + "</title>\n" + "\t<style>\n" + StyleLI + "\t</style>\n" + HtmlHeadBodyC)
-		fp(w, "<center><h3>" + bookName + "</h3></center>\n")
+		bookName := string(Shelf.Books[bookIDX].Bookname)
+		fp(w, "\t<title>TOC of "+bookName+"</title>\n"+"\t<style>\n"+StyleLI+"\t</style>\n"+HtmlHeadBodyC)
+		fp(w, "<center><h3>"+bookName+"</h3></center>\n")
 		fp(w, "<ol>\n")
 
-		for j, page := range Shelf[bookIDX].chapters {
-			fpf(w, "\t<li><a href=\"?a=flp&b=%d&c=%d\">%s</a> (%s)</li>\n", bookIDX, j, page.pagename, page.size)
+		for j, page := range Shelf.Books[bookIDX].Chapters {
+			fpf(w, "\t<li><a href=\"?a=flp&b=%d&c=%d\">%s</a> (%s)</li>\n", bookIDX, j, page.Pagename, page.Size)
 		}
 		fp(w, "</ol>\n")
 
 		fp(w, HtmlFoot)
 	} else if "flp" == action { // 内容
-		page := Shelf[bookIDX].chapters[pageIDX]
-		fpf(w, "\t<title>%s</title>\n\t<style>\n%s\t</style>\n%s\n%s\n", string(page.pagename), StyleLP, PageJS, HtmlHeadBodyC)
+		page := Shelf.Books[bookIDX].Chapters[pageIDX]
+		fpf(w, "\t<title>%s</title>\n\t<style>\n%s\t</style>\n%s\n%s\n", string(page.Pagename), StyleLP, PageJS, HtmlHeadBodyC)
 
-		fpf(w, "<center><h3>%s</h3></center>\n", page.pagename)
-		fp(w, "<div class=\"content\" style=\"line-height:150%;\">\n" )
-		for _, line := range strings.Split(string(page.content), "\n") {
+		fpf(w, "<center><h3>%s</h3></center>\n", page.Pagename)
+		fp(w, "<div class=\"content\" style=\"line-height:150%;\">\n")
+		for _, line := range strings.Split(string(page.Content), "\n") {
 			fpf(w, "<p>%s</p>\n", line)
 		}
 		fp(w, "</div>\n")
-		fpf(w, "<p>    %s</p>\n", page.pagename)
+		fpf(w, "<p>    %s</p>\n", page.Pagename)
 
 		// 上一 bookDIX, pageIDX
 		pBookIDX := bookIDX
@@ -297,7 +331,7 @@ func FoxBookServer(w http.ResponseWriter, r *http.Request) {
 						break
 					}
 				}
-				pPageIDX = len(Shelf[pBookIDX].chapters) - 1
+				pPageIDX = len(Shelf.Books[pBookIDX].Chapters) - 1
 				if pPageIDX >= 0 {
 					break
 				}
@@ -309,10 +343,10 @@ func FoxBookServer(w http.ResponseWriter, r *http.Request) {
 		nBookIDX := bookIDX
 		nPageIDX := pageIDX + 1
 		for {
-			if nPageIDX >= len(Shelf[nBookIDX].chapters) {
+			if nPageIDX >= len(Shelf.Books[nBookIDX].Chapters) {
 				nBookIDX = nBookIDX + 1
-				if nBookIDX >= len(Shelf) {
-					nBookIDX = len(Shelf) - 1
+				if nBookIDX >= len(Shelf.Books) {
+					nBookIDX = len(Shelf.Books) - 1
 					nPageIDX = pageIDX - 1
 					break
 				} else {
@@ -342,11 +376,11 @@ func FoxBookServer(w http.ResponseWriter, r *http.Request) {
 
 func PostFileServer(w http.ResponseWriter, r *http.Request) {
 	tempTxtName := "temp.txt"
-	p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
+	p(r.RemoteAddr, "->", r.Method, r.RequestURI)
 	if "POST" == r.Method {
 		tempText := r.FormValue("text")
 		if "" == tempText { // 文件上传
-			p("- New File Uploading From: " + r.RemoteAddr)
+			// p("- New File Uploading From: " + r.RemoteAddr)
 			r.ParseMultipartForm(99 << 20) // 这里设置为99M，如果文件大小大于99M会出现异常，默认BODY内存大小 32 MB
 			file, ffh, err := r.FormFile("f")
 			fenc := r.FormValue("e")
@@ -357,23 +391,24 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 			} else { // 最大可能是 curl 上传的
 				// 文件名 xx[1]: GBK -> UTF-8
 				re := regexp.MustCompile("filename=\"(.*)\"")
-				newName = re.FindStringSubmatch( GBK2UTF8( ffh.Header.Get("Content-Disposition") ) )[1]
+				newName = re.FindStringSubmatch(foxhttp.GBK2UTF8(ffh.Header.Get("Content-Disposition")))[1]
 				newName = filepath.Base(newName) // 如果包含路径，只取文件名
 			}
 
-			p("- Name:", newName)
+			// p("- Name:", newName)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				return
 			}
 			defer file.Close()
 
-			f,err:=os.Create(newName)
+			f, err := os.Create(newName)
 			defer f.Close()
-			fLen, _ := io.Copy(f,file)
+			fLen, _ := io.Copy(f, file)
 
 			fpf(w, "Server received your file, File Size: %d\n", fLen)
-			p("- Server received a file, File Size: ", fLen, "\n")
+			// p("- Server received a file, File Size: ", fLen, "\n")
+			p("+ File:", newName, "Size:", fLen, "\n")
 		} else { // 便笺
 			p("- tempText len: %d", len(tempText))
 			ioutil.WriteFile(tempTxtName, []byte(tempText), os.ModePerm)
@@ -383,7 +418,7 @@ func PostFileServer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if "GET" == r.Method { // 上传页面
-//		p("- New GET Uploading Page From: " + r.RemoteAddr)
+		//		p("- New GET Uploading Page From: " + r.RemoteAddr)
 		w.Header().Add("Content-Type", "text/html")
 		w.WriteHeader(200)
 		hhead := `<!DOCTYPE html>
@@ -416,7 +451,7 @@ curl http://127.0.0.1:8080/f -F f=@"hello.txt"
 </html>
 `
 		showText := "tmp Text"
-		if FileExist(tempTxtName) { // 读取txt
+		if foxfile.FileExist(tempTxtName) { // 读取txt
 			showBytes, _ := ioutil.ReadFile(tempTxtName)
 			showText = string(showBytes)
 		}
@@ -426,20 +461,20 @@ curl http://127.0.0.1:8080/f -F f=@"hello.txt"
 }
 
 func CGIServer(w http.ResponseWriter, r *http.Request) {
-	p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
+	p(r.RemoteAddr, "->", r.RequestURI)
 	if strings.HasSuffix(r.URL.Path, "/") {
 		http.Redirect(w, r, "/", http.StatusMovedPermanently)
 	} else {
 		handler := new(cgi.Handler)
 		handler.Path = "." + r.URL.Path // exe路径
-		p("RunCGI: " + handler.Path)
+		p("RunCGI:", handler.Path)
 
 		handler.ServeHTTP(w, r)
 	}
 }
 
 type StaticFileHandler struct {
-	root string
+	root         string
 	userAgentStr string
 }
 
@@ -448,23 +483,27 @@ func StaticFileServer(rootDir string, userAgentStr string) http.Handler {
 }
 
 func (sfh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	isKindle := false
+	if strings.Contains(r.UserAgent(), "Kindle") { // 判断是否Kindle
+		isKindle = true
+	}
 
 	fi, err := os.Stat(sfh.root + r.URL.Path)
-	if err != nil {
+	if err != nil { // 文件不存在
 		http.NotFound(w, r)
-		p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI, ": NotFound :", r.UserAgent() )
+		p(r.RemoteAddr, "->", r.RequestURI, ": 不存在 :", r.UserAgent())
 		return
 	}
 	if fi.IsDir() {
 		if sfh.userAgentStr != "" { // 判断UA
-			if ! strings.Contains(r.UserAgent(), sfh.userAgentStr) {
+			if !strings.Contains(r.UserAgent(), sfh.userAgentStr) {
 				http.NotFound(w, r)
-				p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI, ": UA_NO :", r.UserAgent() )
+				p(r.RemoteAddr, "->", r.RequestURI, ": 非法UA :", r.UserAgent())
 				return
 			}
-			p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI, ": UA_OK :", r.UserAgent() )
+			p(r.RemoteAddr, "->", r.RequestURI, ": UA_OK :", r.UserAgent())
 		} else {
-			p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
+			p(r.RemoteAddr, "->", r.RequestURI)
 		}
 
 		rd, err := ioutil.ReadDir(sfh.root + r.URL.Path)
@@ -475,20 +514,34 @@ func (sfh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		w.Header().Add("Content-Type", "text/html")
 		w.WriteHeader(200)
 
-		addStyle := "\na { width: 40%%; height: 35px; line-height: 35px; padding: 10px; text-align: center; color: #000000; border: 1px solid #000000; border-radius: 5px; display: inline-block; font-size: 1rem; }\n"
+		addStyle := ""
+		if isKindle {
+			addStyle = "\na { width: 40%%; height: 35px; line-height: 35px; padding: 10px; text-align: center; color: #000000; border: 1px solid #000000; border-radius: 5px; display: inline-block; font-size: 1rem; }\n"
+		}
 		fpf(w, "<!DOCTYPE html>\n<html>\n<head>\n\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n\t<meta name=\"viewport\" content=\"width=device-width; initial-scale=1.0; minimum-scale=0.1; maximum-scale=3.0; \"/>\n\t<title>Index Of %s</title>\n\t<style>\n\t\tli { line-height: 150%% }\n%s\t</style>\n</head>\n<body>\n\n<h2>Index Of %s</h2>\n<hr>\n<ol>\n\n", r.URL.Path, addStyle, r.URL.Path)
 
+		nowName := ""
 		for _, fi := range rd {
 			if fi.IsDir() {
 				fpf(w, "<li><a href=\"%s/\">%s/</a></li>\n", fi.Name(), fi.Name())
 			} else {
-				fpf(w, "<li><a href=\"%s\">%s</a>  <small>(%d)  (%s)</small></li>\n", fi.Name(), fi.Name(), fi.Size(), fi.ModTime().Format("2006-01-02 15:04:05") )
+				if isKindle { // Kindle 仅显示 mobi pdf
+					nowName = strings.ToLower(fi.Name())
+					if !strings.HasSuffix(nowName, ".mobi") {
+						if !strings.HasSuffix(nowName, ".azw") {
+							if !strings.HasSuffix(nowName, ".pdf") {
+								continue
+							}
+						}
+					}
+				}
+				fpf(w, "<li><a href=\"%s\">%s</a>  <small>(%d)  (%s)</small></li>\n", fi.Name(), fi.Name(), fi.Size(), fi.ModTime().Format("2006-01-02 15:04:05"))
 			}
 		}
 		fp(w, "\n</ol>\n<hr>\n</body>\n</html>\n")
 	} else {
-		p( time.Now().Format("02 15:04:05"), r.RemoteAddr, "->", r.RequestURI )
-		http.ServeFile(w, r, sfh.root + r.URL.Path)
+		p(r.RemoteAddr, "->", r.RequestURI)
+		http.ServeFile(w, r, sfh.root+r.URL.Path)
 	}
 }
 
@@ -515,5 +568,3 @@ func main() {
 }
 
 */
-
-

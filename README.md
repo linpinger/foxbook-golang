@@ -60,10 +60,10 @@
 - 把生成的exe重命名为http.exe，它就成了一个简单的http文件服务器:
   - http://127.0.0.1/ 可以看到当前目录
   - http://127.0.0.1/f 这是上传文件的页面
-  - http://127.0.0.1/fb/ 可以看到小说页面，如果当前目录存在 FoxBook.fml
-  - http://127.0.0.1/foxcgi/xxx.exe  CGI程序(当前目录下存在 foxcgi/xxx.exe, xxx.exe是一个cgi程序，可以用AHK_L版脚本来写)
+  - http://127.0.0.1/fb/ 默认未开启，可以看到小说页面，如果当前目录存在 FoxBook.fml
+  - http://127.0.0.1/foxcgi/xxx.exe  默认未开启，CGI程序(当前目录下存在 foxcgi/xxx.exe, xxx.exe是一个cgi程序，可以用AHK_L版脚本来写)
 - foxbook-golang-x86.exe -h 可以查看命令行参数
-- 如果是服务器模式，默认跟目录为当前目录，默认端口为80(linux/mac下因权限问题需使用-p参数修改一下端口)
+- 如果是服务器模式，默认根目录为当前目录，默认端口为80(linux/mac下因权限问题需使用-p参数修改一下端口)
 
 ## 2018-06-12 交叉编译
 - 原来go支持交叉编译，本人之前还傻傻的在多个平台上去编译，WTF
@@ -88,6 +88,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2020-05-15: 修改: 重构项目结构，更清晰化，修改http客户端，加入一些网页检测已经隐形bug，加入一些开关
 - 2020-05-11: 修改: 针对追更的书，取倒数80个链接getTOCLast
 - 2020-05-09: 修改: 整理了一下命令行参数，添加了几个开关控制服务器功能及选项
 - 2020-04-27: 修改: 更新常用书架，添加ymxxs.com
