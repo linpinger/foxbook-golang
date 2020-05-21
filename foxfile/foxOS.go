@@ -3,7 +3,52 @@ package foxfile
 import (
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 )
+
+func GetUniqDirList(possDirs []string) []string { // 将dirList中的路径abs，去重，返回
+	var oDirs []string
+	var tmpMap map[string]int = make(map[string]int)
+	var tmpABS string
+	for _, sdir := range possDirs {
+		tmpABS, _ = filepath.Abs(sdir)
+		tmpMap[tmpABS] = 1
+	}
+	for k, _ := range tmpMap {
+		oDirs = append(oDirs, k)
+	}
+	return oDirs
+}
+
+func FindExtInDir(sExt string, dirName string) []string {
+	var fNameList []string
+	d, err := os.Open(dirName)
+	if err != nil {
+		return fNameList
+	}
+	aList, _ := d.Readdirnames(0)
+	for _, fn := range aList {
+		if strings.HasSuffix(fn, sExt) {
+			fNameList = append(fNameList, fn)
+		}
+	}
+	defer d.Close()
+	return fNameList
+}
+
+// func FindExtInDirB(sExt string, dirName string) []string {
+// 	var fNameList []string
+// 	if FileExist(dirName) {
+// 		fis, _ := ioutil.ReadDir(dirName)
+// 		for _, fi := range fis {
+// 			if strings.HasSuffix(fi.Name(), sExt) {
+// 				fNameList = append(fNameList, fi.Name())
+// 			}
+// 		}
+// 	}
+// 	return fNameList
+// }
 
 func FindFileInDirList(fName string, posDirList []string) string {
 	if "" == fName {

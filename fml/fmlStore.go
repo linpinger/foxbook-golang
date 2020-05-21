@@ -234,7 +234,7 @@ func (shelf *Shelf) GetAllBookIDX() []int { // 获取所有需更新的bookIDX
 	return idxs
 }
 func (shelf *Shelf) ClearBook(bookIDX int) *Shelf { // 清空某书，保存记录的内种
-	book := shelf.Books[bookIDX]
+	book := &shelf.Books[bookIDX]
 	newDelURL := SimplifyDelList(book.GetBookAllPageStr()) // 获取某书的所有章节列表字符串 并精简
 	book.Delurl = []byte(newDelURL)
 	book.Chapters = nil

@@ -87,7 +87,7 @@ func startHTTPServer(listenPort string, httpRootDir string, cookiePath string, p
 		http.HandleFunc("/foxcgi/", server.CGIServer) // cgi处理
 	}
 	if bFB {
-		http.Handle("/fb/", server.FoxBookServer("meegoq.fml", cookiePath, posDirList)) // 小说管理，以上可按需注释掉 todo
+		http.Handle("/fb/", server.FoxBookServer(posDirList, cookiePath)) // 小说管理，以上可按需注释掉 todo
 	}
 
 	err := http.ListenAndServe(":"+listenPort, nil)
@@ -137,8 +137,8 @@ func main() {
 	// start
 
 	if bVersion { // -v
-		p("Version : 2020-05-15 public")
-		p("Compiler: go version go1.14.2 linux/amd64")
+		p("Version : 2020-05-21 public")
+		p("Compiler: go version go1.14.3 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [filePath]")
 		p("Example :")
 		p("\t", os.Args[0], "-gu http://127.0.0.1/f [-U uastr] [fileName.path]")
@@ -154,7 +154,7 @@ func main() {
 	}
 
 	// 查找fml,cookie路径，考虑不存在的异常, 模式: 命令或服务器
-	var posDirList = []string{"./", "/home/fox/bin/", "/root/bin/", "/dev/shm/00/", "/dev/shm/00/foxcgi/", "/dev/shm/00/cgi-bin/"} // 非win的路径，以后可以增加
+	var posDirList = []string{"./", "/dev/shm/00/", "/dev/shm/test/", "/home/fox/bin/", "/root/bin/", "/home/etc/"} // 非win的路径，以后可以增加
 	if "windows" == runtime.GOOS {
 		posDirList = []string{"./", "C:/bin/sqlite/FoxBook/", "D:/bin/sqlite/FoxBook/", "T:/x/", "T:/x/FML/"}
 	}
