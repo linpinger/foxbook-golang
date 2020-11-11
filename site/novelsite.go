@@ -5,7 +5,8 @@ import (
 	"strings"
 )
 
-// var p = fmt.Println
+// "fmt"
+// "io/ioutil"
 
 func TestHtmlOK(html string) bool {
 	isOK := false
@@ -26,7 +27,7 @@ func GetTOCLast(html string) [][]string {
 	if !TestHtmlOK(html) {
 		return nil
 	}
-	lastCount := 80 // 取倒数80个链接
+	lastCount := 50 // 取倒数50个链接
 
 	// 链接列表 lks
 	reLink, _ := regexp.Compile("(?smi)<a[^>]*?href=[\"|']([^\"']*?)[\"|'][^>]*?>([^<]*)<")
@@ -63,7 +64,8 @@ func GetTOCLast(html string) [][]string {
 		endIDX = i
 	}
 
-	return lks[firstIDX : 1+endIDX]
+	// return lks[firstIDX : 1+endIDX]
+	return filterIT(lks[firstIDX : 1+endIDX])
 }
 
 func GetTOC(html string) [][]string {
@@ -146,7 +148,47 @@ func GetTOC(html string) [][]string {
 	}
 	//	p("endIDX =", endIDX, "  endURL =", lks[endIDX][1], "  endName =", lks[endIDX][2])
 
-	return lks[startIDX : 1+endIDX]
+	// return lks[startIDX : 1+endIDX]
+	return filterIT(lks[startIDX : 1+endIDX])
+}
+
+// 2020-11-11: 遍历links，比较url以/开头或http开头的数量与links的数量差异以确定url是什么类型的,方便删除多余链接，主要针对miaobige
+func filterIT(links [][]string) [][]string {
+	countLinks := len(links)
+	countURLStartWithSlash := 0
+	countURLStartWithHTTP := 0
+
+	for _, l := range links {
+		if strings.HasPrefix(l[1], "/") {
+			countURLStartWithSlash += 1
+			continue
+		}
+		if strings.HasPrefix(l[1], "http") {
+			countURLStartWithHTTP += 1
+			continue
+		}
+		// p(l[1], l[2])
+	}
+
+	if countURLStartWithSlash+countURLStartWithHTTP > 0 {
+		countURLOther := countLinks - countURLStartWithSlash - countURLStartWithHTTP
+		if 0 == countURLOther {
+			if countURLStartWithHTTP > countURLStartWithSlash {
+				for i, l := range links {
+					if strings.HasPrefix(l[1], "/") {
+						links = append(links[:i], links[i+1:]...) // 删除
+					}
+				}
+			} else {
+				for i, l := range links {
+					if strings.HasPrefix(l[1], "http") {
+						links = append(links[:i], links[i+1:]...) // 删除
+					}
+				}
+			}
+		}
+	}
+	return links
 }
 
 func GetContent(html string) string {
@@ -259,19 +301,19 @@ func Qidian_GetContent_Touch7_Ajax(jsonStr string) string {
 	return jsonStr
 }
 
-/*
-func main() {
-	bb, _ := ioutil.ReadFile("index.html")
+// var p = fmt.Println
 
-	lk := getTOC(string(bb))
-	for _, l := range lk {
-		p(l[1], l[2])
-	}
+// func main() {
+// 	bb, _ := ioutil.ReadFile("T:/index.html")
 
-//	p( getContent(string(bb)) )
+// 	lk := GetTOCLast(string(bb))
+// 	for _, l := range lk {
+// 		p(l[1], l[2])
+// 	}
+// 	p("len =", len(lk))
 
-//	var aaa int
-//	fmt.Scanf("%c",&aaa)
-}
+// 	//	p( getContent(string(bb)) )
 
-*/
+// 	//	var aaa int
+// 	//	fmt.Scanf("%c",&aaa)
+// }

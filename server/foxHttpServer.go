@@ -474,7 +474,7 @@ func (sfh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		fmt.Fprint(w, HtmlHead)
 		fmt.Fprintf(w, "\n\t<title>Index Of %s</title>\n\t<style>\n\t\tli { line-height: 150%% }\n", r.URL.Path)
 		if isKindle {
-			fmt.Fprint(w, "\na { width: 40%%; height: 35px; line-height: 35px; padding: 10px; text-align: center; color: #000000; border: 1px solid #000000; border-radius: 5px; display: inline-block; font-size: 1rem; }\n")
+			fmt.Fprint(w, "\na { width: 40%; height: 35px; line-height: 35px; padding: 10px; text-align: center; color: #000000; border: 1px solid #000000; border-radius: 5px; display: inline-block; font-size: 1rem; }\n")
 		}
 		fmt.Fprintf(w, "\t</style>\n</head>\n<body>\n\n<h2>Index Of %s</h2>\n<hr>\n<ol>\n\n", r.URL.Path)
 

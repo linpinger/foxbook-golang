@@ -23,6 +23,8 @@ func mapFmlName(inName string) string {
 	var outName string
 
 	switch inName {
+	case "mb":
+		outName = "miaobige.fml"
 	case "dj":
 		outName = "dajiadu.fml"
 	case "wt":
@@ -137,8 +139,8 @@ func main() {
 	// start
 
 	if bVersion { // -v
-		p("Version : 2020-05-21 public")
-		p("Compiler: go version go1.14.3 linux/amd64")
+		p("Version : 2020-11-11 public")
+		p("Compiler: go version go1.15.4 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [filePath]")
 		p("Example :")
 		p("\t", os.Args[0], "-gu http://127.0.0.1/f [-U uastr] [fileName.path]")
