@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -14,31 +15,34 @@ import (
 	"github.com/linpinger/foxbook-golang/foxfile"
 	"github.com/linpinger/foxbook-golang/foxhttp"
 	"github.com/linpinger/foxbook-golang/server"
+
+	"golang.org/x/net/webdav"
 )
 
 // 全局变量
 var p = fmt.Println
 
+var bOpenUpload = true
+var bOpenFB = false
+var bOpenCGI = false
+
+var bWebDAV = true
+var webDAVPrefix = "/webdav/"
+var webDAVUser = "fox"
+var webDAVPass = "book"
+
 func mapFmlName(inName string) string {
 	var outName string
 
 	switch inName {
+	case "dd":
+		outName = "230book.fml"
+	case "bqd":
+		outName = "biqudao.fml"
 	case "mb":
 		outName = "miaobige.fml"
-	case "dj":
-		outName = "dajiadu.fml"
 	case "wt":
 		outName = "wutuxs.fml"
-	case "mg":
-		outName = "meegoq.fml"
-	case "xs":
-		outName = "xsbiquge.fml"
-	case "13":
-		outName = "13xxs.fml"
-	case "xq":
-		outName = "xqqxs.fml"
-	case "ym":
-		outName = "ymxxs.fml"
 	case "qd":
 		outName = "qidian.fml"
 	case "fb":
@@ -50,7 +54,7 @@ func mapFmlName(inName string) string {
 	return outName
 }
 
-func startHTTPServer(listenPort string, httpRootDir string, cookiePath string, posDirList []string, userAgentStr string, logPath string, bUP bool, bFB bool, bCGI bool) {
+func startHTTPServer(listenPort string, httpRootDir string, cookiePath string, posDirList []string, userAgentStr string, logPath string) {
 	p("# Port:", listenPort, "            PID:", os.Getpid())
 
 	addrs, errl := net.InterfaceAddrs() // 获取本地IP
@@ -70,7 +74,7 @@ func startHTTPServer(listenPort string, httpRootDir string, cookiePath string, p
 
 	fullRootDir, _ := filepath.Abs(httpRootDir)
 	p("# Root Dir:", httpRootDir, "=", fullRootDir)
-	if bFB {
+	if bOpenFB {
 		p("# Cookie:", cookiePath)
 	}
 
@@ -78,21 +82,68 @@ func startHTTPServer(listenPort string, httpRootDir string, cookiePath string, p
 		server.SetLogPath(logPath) // 在所有server前调用
 		p("# Log:", logPath)
 	}
-	p("# bUP =", bUP, ", bFB =", bFB, ", bCGI =", bCGI, "\n")
+	p("# bWebDAV =", bWebDAV, ", bUP =", bOpenUpload, ", bFB =", bOpenFB, ", bCGI =", bOpenCGI, "\n")
+
+	srv := &http.Server{Addr: ":" + listenPort}
 
 	//	http.Handle("/", http.FileServer(http.Dir(httpRootDir)))
 	http.Handle("/", server.StaticFileServer(httpRootDir, userAgentStr)) // 静态文件处理
-	if bUP {
+	if bOpenUpload {
 		http.HandleFunc("/f", server.PostFileServer) // 上传文件处理
 	}
-	if bCGI {
+	if bOpenCGI {
 		http.HandleFunc("/foxcgi/", server.CGIServer) // cgi处理
 	}
-	if bFB {
+	if bOpenFB {
 		http.Handle("/fb/", server.FoxBookServer(posDirList, cookiePath)) // 小说管理，以上可按需注释掉 todo
 	}
+	if bWebDAV {
+		// https://blog.csdn.net/bbdxf/article/details/90027221
+		fs := &webdav.Handler{
+			Prefix:     webDAVPrefix,
+			FileSystem: webdav.Dir(httpRootDir),
+			LockSystem: webdav.NewMemLS(),
+		}
+		http.HandleFunc(webDAVPrefix, func(w http.ResponseWriter, r *http.Request) {
+			log.Println(r.RemoteAddr, "->", r.Method, "->", r.RequestURI)
+			// 获取用户名/密码
+			username, password, ok := r.BasicAuth()
+			if !ok {
+				w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			// 验证用户名/密码
+			if username != webDAVUser || password != webDAVPass {
+				http.Error(w, "WebDAV: need authorized!", http.StatusUnauthorized)
+				return
+			}
 
-	err := http.ListenAndServe(":"+listenPort, nil)
+			//switch r.Method {
+			//case "PUT", "DELETE", "PROPPATCH", "MKCOL", "COPY", "MOVE":
+			//	http.Error(w, "WebDAV: Read Only!!!", http.StatusForbidden)
+			//	return
+			//}
+//			if strings.HasPrefix(r.RequestURI, fs.Prefix) {
+			fs.ServeHTTP(w, r)
+				//fmt.Println("fs call")
+			return
+//			}
+
+			// if strings.HasPrefix(r.RequestURI, fs2.Prefix) {
+			// 	fs2.ServeHTTP(w, r)
+			// 	//fmt.Println("fs2 call")
+			// 	return
+			// }
+
+			// else
+//			w.WriteHeader(404)
+		}) // webDAV
+	}
+
+	//	http.Handle("/guanbihttp", server.ShutDownServer(srv))
+
+	err := srv.ListenAndServe()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ListenAndServe: ", err)
 	}
@@ -109,11 +160,12 @@ func main() {
 	flag.StringVar(&cookiePath, "c", "FoxBook.cookie", "cookie file Path, if blank then not download bookcase")
 
 	// switch
-	var bVersion, bOpenUpload, bOpenFB, bOpenCGI bool
+	flag.BoolVar(&bWebDAV, "w", bWebDAV, "Open WebDAV function")
+	flag.BoolVar(&bOpenUpload, "up", bOpenUpload, "Browse /f to show upload page")
+	flag.BoolVar(&bOpenFB, "fb", bOpenFB, "Browse /fb to show shelf")
+	flag.BoolVar(&bOpenCGI, "cgi", bOpenCGI, "Open CGI Func, Put bin in /foxcgi/")
+	var bVersion bool
 	flag.BoolVar(&bVersion, "v", false, "Version info about this Binary")
-	flag.BoolVar(&bOpenUpload, "up", true, "Browse /f to show upload page")
-	flag.BoolVar(&bOpenFB, "fb", false, "Browse /fb to show shelf")
-	flag.BoolVar(&bOpenCGI, "cgi", false, "Open CGI Func, Put bin in /foxcgi/")
 
 	// tool: postURL 依赖: fmlPath
 	var getURL, postURL, ebookSavePath string
@@ -130,6 +182,11 @@ func main() {
 	flag.StringVar(&logPath, "log", "", "server: Log Save Path")
 	flag.StringVar(&userAgentStr, "U", "", "server: only this UserAgent can show Dir")
 
+	// webdav config
+	flag.StringVar(&webDAVPrefix, "wp", webDAVPrefix, "WebDAV: Prefix")
+	flag.StringVar(&webDAVUser, "wu", webDAVUser, "WebDAV: UserName")
+	flag.StringVar(&webDAVPass, "wx", webDAVPass, "WebDAV: PassWord")
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [args] [filePath]\n", os.Args[0])
 		flag.PrintDefaults()
@@ -139,8 +196,8 @@ func main() {
 	// start
 
 	if bVersion { // -v
-		p("Version : 2020-11-11 public")
-		p("Compiler: go version go1.15.4 linux/amd64")
+		p("Version : 2021-05-13 public")
+		p("Compiler: go version go1.16.4 linux/amd64")
 		p("Usage   :", os.Args[0], "[args] [filePath]")
 		p("Example :")
 		p("\t", os.Args[0], "-gu http://127.0.0.1/f [-U uastr] [fileName.path]")
@@ -156,7 +213,7 @@ func main() {
 	}
 
 	// 查找fml,cookie路径，考虑不存在的异常, 模式: 命令或服务器
-	var posDirList = []string{"./", "/dev/shm/00/", "/dev/shm/test/", "/home/fox/bin/", "/root/bin/", "/home/etc/"} // 非win的路径，以后可以增加
+	var posDirList = []string{"./", "/sdcard/FoxBook/", "/sdcard/FoxBook/fmls/", "/dev/shm/00/", "/dev/shm/x/", "/home/fox/bin/", "/root/bin/", "/home/etc/"} // 非win的路径，以后可以增加
 	if "windows" == runtime.GOOS {
 		posDirList = []string{"./", "C:/bin/sqlite/FoxBook/", "D:/bin/sqlite/FoxBook/", "T:/x/", "T:/x/FML/"}
 	}
@@ -169,7 +226,7 @@ func main() {
 			p("- 下载完毕，文件大小:", foxhttp.GetFile(getURL, "", userAgentStr))
 			os.Exit(0)
 		}
-		startHTTPServer(listenPort, rootDir, cookiePath, posDirList, userAgentStr, logPath, bOpenUpload, bOpenFB, bOpenCGI) // 服务器
+		startHTTPServer(listenPort, rootDir, cookiePath, posDirList, userAgentStr, logPath) // 服务器
 	case 1: // 一个文件的处理
 		if "" != getURL { // 下载文件
 			p("- 下载完毕，文件大小:", foxhttp.GetFile(getURL, flag.Arg(0), userAgentStr))

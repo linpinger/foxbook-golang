@@ -26,7 +26,7 @@ func UpdateShelf(fmlPath string, cookiePath string) *fml.Shelf { // 导出函数
 	shelf := fml.NewShelf(fmlPath) // 读取
 	fmlName := filepath.Base(fmlPath)
 
-	p("# Start Update:", fmlName)
+	p("< Start Update:", fmlName)
 	var idxs []int
 	if "" != cookiePath {
 		p("- Cookie:", cookiePath)
@@ -68,7 +68,7 @@ func UpdateShelf(fmlPath string, cookiePath string) *fml.Shelf { // 导出函数
 		shelf.Sort() // 排序
 		shelf.Save(fmlPath)
 	}
-	p("# End of Update:", fmlName)
+	p("> End of Update:", fmlName)
 	return shelf
 }
 

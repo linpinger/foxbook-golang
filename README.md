@@ -16,7 +16,7 @@
 
 **亮点:** 通用小说网站规则能覆盖大部分文字站的目录及正文内容分析，不需要针对每个网站的规则
 
-**依赖:** golang.org/x/text/encoding/simplifiedchinese
+**依赖:** golang.org/x/text/encoding/simplifiedchinese    golang.org/x/net/webdav
 
 **旧版(2019-12-13之前)依赖:** https://github.com/axgle/mahonia
 
@@ -25,15 +25,24 @@
 - SF(慢，好像没有限制): http://master.dl.sourceforge.net/project/foxtestphp/prj/foxbook-golang-bin.zip
 
 **编译:**
-- 下载go: https://golang.org/dl/
+- 下载go: https://golang.google.cn/dl/   或   https://golang.org/dl/
 - 配置好 GOPATH
-  - 例如下载 go1.8.3.windows-386.zip 解压到 D:\，于是存在 D:\go 目录
+  - 例如下载 go1.16.4.windows-amd64.zip 解压到 D:\，于是存在 D:\go 目录
   - 准备一个放置源码的工作目录 D:\prj
   - Win + R 输入 cmd 回车进入命令行
   - cd /d D:\prj
   - set PATH=D:\go\bin;%PATH%
   - set GOROOT=D:\go
   - set GOPATH=D:\prj
+  - set GOPROXY=https://goproxy.cn,direct
+- 如果`go version`的版本大于等于1.16
+  - 下载，编译
+    - `go get github.com/linpinger/foxbook-golang`
+  - 或只下载main.go，放到`D:\prj`目录下
+    - go mod init github.com/linpinger/foxbook-golang
+	- go mod tidy
+	- go mod vendor
+	- go build -ldflags "-s -w"
 - 依赖的库，GBK与UTF-8互转
   - 下载这个包(40多M): https://github.com/golang/text/
   - 或者单独下载这9个文件(对应上面包中文件，按下面路径保存): 
@@ -88,6 +97,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2021-05-13: 添加: 使用go mod适应新版go1.16，http中添加webDAV，什么设置都不改的话，可以用 `curl -X PROPFIND -H "Depth: 1" http://fox:book@127.0.0.1:80/webdav/` 查看返回的目录信息
 - 2020-11-11: 修改: 修改GetTOC/Last相关代码
 - 2020-05-21: 修改: 修改server相关代码
 - 2020-05-15: 修改: 重构项目结构，更清晰化，修改http客户端，加入一些网页检测已经隐形bug，加入一些开关

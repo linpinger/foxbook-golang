@@ -430,6 +430,18 @@ func CGIServer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type ShutDownHandler struct {
+	srv *http.Server
+}
+func ShutDownServer(srv *http.Server) http.Handler {
+	return &ShutDownHandler{srv}
+}
+func (sdh *ShutDownHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := sdh.srv.Shutdown(nil); err != nil {
+		fmt.Fprintln(os.Stderr, "ShutDown Http Server Error: ", err)
+	}
+}
+
 type StaticFileHandler struct {
 	root         string
 	userAgentStr string
