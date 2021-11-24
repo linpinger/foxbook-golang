@@ -11,34 +11,50 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/linpinger/foxbook-golang/cmd"
-	"github.com/linpinger/foxbook-golang/foxfile"
-	"github.com/linpinger/foxbook-golang/foxhttp"
-	"github.com/linpinger/foxbook-golang/server"
-
-	"golang.org/x/net/webdav"
+	"github.com/linpinger/foxbook-golang/tool"
 )
 
 // 全局变量
-var p = fmt.Println
+var (
+	listenPort   = "80"
+	rootDir      = "."
+	logPath      = ""
+	userAgentStr = ""
+	cookiePath   = "FoxBook.cookie"
 
-var bOpenUpload = true
-var bOpenFB = false
-var bOpenCGI = false
+	bOpenUpload   = true
+	bOpenFML2Mobi = true
+	bOpenFB       = false
+	bOpenCGI      = false
 
-var bWebDAV = true
-var webDAVPrefix = "/webdav/"
-var webDAVUser = "fox"
-var webDAVPass = "book"
+	bWebDAV      = true
+	webDAVPrefix = "/webdav/"
+	webDAVUser   = "fox"
+	webDAVPass   = "book"
+)
+
+func printVersionInfo() {
+	fmt.Printf(`Version : 2021-11-24 public
+Compiler: go1.17.3 linux/amd64
+Usage   : %[1]s [args] [filePath]
+Example :
+	%[1]s -c "D:/cookie/file/path" FoxBook.fml
+	%[1]s -to all_xx.mobi xx.fml
+	%[1]s -to xx.mobi -idx 0 all.fml
+	%[1]s -to dir2mobi -d /dev/shm/00/
+
+	%[1]s -p 8080 -U "FoxBook" -d "D:/http/root/dir/path/"
+	%[1]s -gu http://127.0.0.1/f [-U uastr] [fileName.path]
+	%[1]s -pu http://127.0.0.1/f fileToPost.path
+`, os.Args[0])
+}
 
 func mapFmlName(inName string) string {
 	var outName string
 
 	switch inName {
-	case "dd":
-		outName = "230book.fml"
-	case "bqd":
-		outName = "biqudao.fml"
+	case "jt":
+		outName = "9txs.fml"
 	case "mb":
 		outName = "miaobige.fml"
 	case "wt":
@@ -54,9 +70,15 @@ func mapFmlName(inName string) string {
 	return outName
 }
 
-func startHTTPServer(listenPort string, httpRootDir string, cookiePath string, posDirList []string, userAgentStr string, logPath string) {
-	p("# Port:", listenPort, "            PID:", os.Getpid())
+/*
+func init() {
+//	log.SetFlags( log.Ltime | log.Lmicroseconds | log.Lshortfile ) // log.LstdFlags  DEBUG
+	log.SetFlags(log.Ltime)
+	log.SetPrefix("- ")
+}
+*/
 
+func printLocalIPList() {
 	addrs, errl := net.InterfaceAddrs() // 获取本地IP
 	if errl == nil {
 		for _, addr := range addrs {
@@ -66,85 +88,73 @@ func startHTTPServer(listenPort string, httpRootDir string, cookiePath string, p
 			if strings.Contains(addr.String(), "127.0.0.1") {
 				continue
 			}
-			p("# IP:", addr.String())
+			fmt.Println("# IP:", addr.String())
 		}
 	} else {
-		fmt.Fprintln(os.Stderr, "Get Local IP Error:", errl)
+		fmt.Fprintln(os.Stderr, "# Error: Get Local IP:", errl)
+	}
+}
+
+func FindFileInDirList(fName string, posDirList []string) string {
+	if "" == fName {
+		return ""
 	}
 
-	fullRootDir, _ := filepath.Abs(httpRootDir)
-	p("# Root Dir:", httpRootDir, "=", fullRootDir)
+	if !tool.FileExist(fName) {
+		for _, ndp := range posDirList {
+			if tool.FileExist(ndp + fName) {
+				fName = ndp + fName
+				break
+			}
+		}
+	}
+
+	if !tool.FileExist(fName) {
+		fName = ""
+	}
+	return fName
+}
+
+func startHTTPServer(posDirList []string) {
+	fmt.Println("# Port:", listenPort, "            PID:", os.Getpid())
+	printLocalIPList()
+
+	fullRootDir, _ := filepath.Abs(rootDir)
+	fmt.Println("# Root Dir:", rootDir, "=", fullRootDir)
 	if bOpenFB {
-		p("# Cookie:", cookiePath)
+		fmt.Println("# Cookie:", cookiePath)
 	}
 
-	if "" != logPath {
-		server.SetLogPath(logPath) // 在所有server前调用
-		p("# Log:", logPath)
+	if "" != logPath { // 在所有server前调用
+		fLog, _ := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+		// defer fLog.Close()
+		log.SetOutput(fLog)
+		fmt.Println("# Log:", logPath)
 	}
-	p("# bWebDAV =", bWebDAV, ", bUP =", bOpenUpload, ", bFB =", bOpenFB, ", bCGI =", bOpenCGI, "\n")
+	fmt.Println("# bWebDAV =", bWebDAV, ", bUP =", bOpenUpload, ", b2Mobi =", bOpenFML2Mobi, ", bFB =", bOpenFB, ", bCGI =", bOpenCGI, "\n")
 
 	srv := &http.Server{Addr: ":" + listenPort}
 
-	//	http.Handle("/", http.FileServer(http.Dir(httpRootDir)))
-	http.Handle("/", server.StaticFileServer(httpRootDir, userAgentStr)) // 静态文件处理
-	if bOpenUpload {
-		http.HandleFunc("/f", server.PostFileServer) // 上传文件处理
+	http.Handle("/", NewHandlerStaticFile(rootDir, userAgentStr)) // 静态文件处理
+	if bWebDAV {
+		http.Handle(webDAVPrefix, NewHandlerWebDav(rootDir, webDAVPrefix, webDAVUser, webDAVPass))
 	}
-	if bOpenCGI {
-		http.HandleFunc("/foxcgi/", server.CGIServer) // cgi处理
+	if bOpenUpload {
+		http.HandleFunc("/f", NewHandlerPostFile) // 上传文件处理
+	}
+	if bOpenFML2Mobi {
+		http.Handle("/t", NewHandlerFML2MOBI(rootDir)) // 转换目录下的fml为mobi
 	}
 	if bOpenFB {
-		http.Handle("/fb/", server.FoxBookServer(posDirList, cookiePath)) // 小说管理，以上可按需注释掉 todo
+		http.Handle("/fb/", NewHandlerFoxBook(posDirList, cookiePath)) // 小说管理
 	}
-	if bWebDAV {
-		// https://blog.csdn.net/bbdxf/article/details/90027221
-		fs := &webdav.Handler{
-			Prefix:     webDAVPrefix,
-			FileSystem: webdav.Dir(httpRootDir),
-			LockSystem: webdav.NewMemLS(),
-		}
-		http.HandleFunc(webDAVPrefix, func(w http.ResponseWriter, r *http.Request) {
-			log.Println(r.RemoteAddr, "->", r.Method, "->", r.RequestURI)
-			// 获取用户名/密码
-			username, password, ok := r.BasicAuth()
-			if !ok {
-				w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			// 验证用户名/密码
-			if username != webDAVUser || password != webDAVPass {
-				http.Error(w, "WebDAV: need authorized!", http.StatusUnauthorized)
-				return
-			}
-
-			//switch r.Method {
-			//case "PUT", "DELETE", "PROPPATCH", "MKCOL", "COPY", "MOVE":
-			//	http.Error(w, "WebDAV: Read Only!!!", http.StatusForbidden)
-			//	return
-			//}
-//			if strings.HasPrefix(r.RequestURI, fs.Prefix) {
-			fs.ServeHTTP(w, r)
-				//fmt.Println("fs call")
-			return
-//			}
-
-			// if strings.HasPrefix(r.RequestURI, fs2.Prefix) {
-			// 	fs2.ServeHTTP(w, r)
-			// 	//fmt.Println("fs2 call")
-			// 	return
-			// }
-
-			// else
-//			w.WriteHeader(404)
-		}) // webDAV
+	if bOpenCGI {
+		http.HandleFunc("/foxcgi/", NewHandlerCGI) // cgi处理
 	}
 
-	//	http.Handle("/guanbihttp", server.ShutDownServer(srv))
+	// http.Handle("/guanbihttp", NewHandlerShutDown(srv))
 
-	err := srv.ListenAndServe()
-	if err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		fmt.Fprintln(os.Stderr, "ListenAndServe: ", err)
 	}
 }
@@ -156,31 +166,31 @@ func main() {
 	//	nowExeName := filepath.Base(os.Args[0])
 	//	if "http" == nowExeName || "http.exe" == nowExeName { isBinNameHTTP = true }
 
-	var fmlPath, cookiePath string
-	flag.StringVar(&cookiePath, "c", "FoxBook.cookie", "cookie file Path, if blank then not download bookcase")
+	var fmlPath string
+	flag.StringVar(&cookiePath, "c", cookiePath, "cookie file Path, if blank then not download bookcase")
 
 	// switch
-	flag.BoolVar(&bWebDAV, "w", bWebDAV, "Open WebDAV function")
-	flag.BoolVar(&bOpenUpload, "up", bOpenUpload, "Browse /f to show upload page")
-	flag.BoolVar(&bOpenFB, "fb", bOpenFB, "Browse /fb to show shelf")
-	flag.BoolVar(&bOpenCGI, "cgi", bOpenCGI, "Open CGI Func, Put bin in /foxcgi/")
+	flag.BoolVar(&bWebDAV, "w", bWebDAV, "server switch: "+webDAVPrefix+" to use WebDAV")
+	flag.BoolVar(&bOpenUpload, "up", bOpenUpload, "server switch: /f to upload file")
+	flag.BoolVar(&bOpenFML2Mobi, "t", bOpenFML2Mobi, "server switch: /t to convert fml to mobi")
+	flag.BoolVar(&bOpenFB, "fb", bOpenFB, "server switch: /fb to show shelf")
+	flag.BoolVar(&bOpenCGI, "cgi", bOpenCGI, "server switch: /foxcgi/ to use CGI, Put bin here")
 	var bVersion bool
-	flag.BoolVar(&bVersion, "v", false, "Version info about this Binary")
+	flag.BoolVar(&bVersion, "v", false, "switch: print Version And Examples")
 
 	// tool: postURL 依赖: fmlPath
 	var getURL, postURL, ebookSavePath string
 	flag.StringVar(&getURL, "gu", "", "Tool: Download a File, Set UserAgent with -U option")
 	flag.StringVar(&postURL, "pu", "http://127.0.0.0/f", "Tool: POST a File to This URL")
-	flag.StringVar(&ebookSavePath, "to", "", "cmd: mobi/epub save path or dir2mobi or automobi or autoepub")
+	flag.StringVar(&ebookSavePath, "to", "", "ebook: mobi/epub save path or dir2mobi or automobi or autoepub")
 	var ebookIDX int
-	flag.IntVar(&ebookIDX, "idx", -1, "which idx(base 0) book to mobi/epub")
+	flag.IntVar(&ebookIDX, "idx", -1, "ebook: index(0 base) of fml to mobi/epub")
 
 	// config
-	var listenPort, rootDir, userAgentStr, logPath string
-	flag.StringVar(&listenPort, "p", "80", "server: Listen Port")
-	flag.StringVar(&rootDir, "d", ".", "server: Root Dir")
-	flag.StringVar(&logPath, "log", "", "server: Log Save Path")
-	flag.StringVar(&userAgentStr, "U", "", "server: only this UserAgent can show Dir")
+	flag.StringVar(&listenPort, "p", listenPort, "server: Listen Port")
+	flag.StringVar(&rootDir, "d", rootDir, "server: Root Dir")
+	flag.StringVar(&logPath, "log", logPath, "server: Log Save Path")
+	flag.StringVar(&userAgentStr, "U", userAgentStr, "server: only this UserAgent can view Dir")
 
 	// webdav config
 	flag.StringVar(&webDAVPrefix, "wp", webDAVPrefix, "WebDAV: Prefix")
@@ -196,63 +206,55 @@ func main() {
 	// start
 
 	if bVersion { // -v
-		p("Version : 2021-05-13 public")
-		p("Compiler: go version go1.16.4 linux/amd64")
-		p("Usage   :", os.Args[0], "[args] [filePath]")
-		p("Example :")
-		p("\t", os.Args[0], "-gu http://127.0.0.1/f [-U uastr] [fileName.path]")
-		p("\t", os.Args[0], "-pu http://127.0.0.1/f fileToPost.path")
-		p("\t", os.Args[0], "-to all_xx.mobi xx.fml")
-		p("\t", os.Args[0], "-to xx.mobi -idx 0 all.fml")
-		p("\t", os.Args[0], "-to dir2mobi -d /dev/shm/00/")
+		printVersionInfo()
 		os.Exit(0)
 	}
 	if "dir2mobi" == ebookSavePath {
-		cmd.FMLs2Mobi(rootDir)
+		FMLs2Mobi(rootDir)
 		os.Exit(0)
 	}
 
 	// 查找fml,cookie路径，考虑不存在的异常, 模式: 命令或服务器
 	var posDirList = []string{"./", "/sdcard/FoxBook/", "/sdcard/FoxBook/fmls/", "/dev/shm/00/", "/dev/shm/x/", "/home/fox/bin/", "/root/bin/", "/home/etc/"} // 非win的路径，以后可以增加
 	if "windows" == runtime.GOOS {
-		posDirList = []string{"./", "C:/bin/sqlite/FoxBook/", "D:/bin/sqlite/FoxBook/", "T:/x/", "T:/x/FML/"}
+		posDirList = []string{"./", "C:/bin/sqlite/FoxBook/", "D:/bin/sqlite/FoxBook/", "T:/cache/"}
 	}
-	cookiePath = foxfile.FindFileInDirList(cookiePath, posDirList)
+	cookiePath = FindFileInDirList(cookiePath, posDirList)
 
 	fileCount := flag.NArg() // 处理后的参数个数，一般是文件路径
 	switch fileCount {
 	case 0: // 无需文件的处理
 		if "" != getURL { // 下载文件
-			p("- 下载完毕，文件大小:", foxhttp.GetFile(getURL, "", userAgentStr))
+			fmt.Println("- 下载完毕，文件大小:", tool.GetFile(getURL, "", userAgentStr))
 			os.Exit(0)
 		}
-		startHTTPServer(listenPort, rootDir, cookiePath, posDirList, userAgentStr, logPath) // 服务器
+		startHTTPServer(posDirList) // 服务器
 	case 1: // 一个文件的处理
 		if "" != getURL { // 下载文件
-			p("- 下载完毕，文件大小:", foxhttp.GetFile(getURL, flag.Arg(0), userAgentStr))
+			fmt.Println("- 下载完毕，文件大小:", tool.GetFile(getURL, flag.Arg(0), userAgentStr))
 			os.Exit(0)
 		}
 
 		fmlPath = mapFmlName(flag.Arg(0))
-		fmlPath = foxfile.FindFileInDirList(fmlPath, posDirList)
+		fmlPath = FindFileInDirList(fmlPath, posDirList)
 		if "" == fmlPath {
 			fmt.Fprintln(os.Stderr, "- Error: 文件不存在:", flag.Arg(0))
 			os.Exit(1)
 		}
 
 		if "http://127.0.0.0/f" != postURL { // POST文件
-			if foxfile.FileExist(fmlPath) {
-				p(foxhttp.PostFile(fmlPath, postURL))
+			if tool.FileExist(fmlPath) {
+				fmt.Println(tool.PostFile(fmlPath, postURL))
 			}
 			os.Exit(0)
 		}
 
 		if "" != ebookSavePath { // to mobi/epub
-			cmd.FML2EBook(ebookSavePath, fmlPath, ebookIDX)
+			FML2EBook(ebookSavePath, fmlPath, ebookIDX, true)
 			os.Exit(0)
 		}
 
-		cmd.UpdateShelf(fmlPath, cookiePath) // 更新fml
+		UpdateShelf(fmlPath, cookiePath) // 更新fml
 		os.Exit(0)
 	default:
 		fmt.Fprintln(os.Stderr, "Error: cmd parse error")

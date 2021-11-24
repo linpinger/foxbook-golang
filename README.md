@@ -2,7 +2,7 @@
 
 **名称:** FoxBook
 
-**功能:** 狐狸的小说下载阅读及转换工具(下载小说站小说，制作为mobi,epub格式)
+**功能:** 狐狸的小说下载阅读及转换工具(下载小说站小说，制作为mobi,epub格式，http/webdav/cgi服务器)
 
 **作者:** 爱尔兰之狐(linpinger)
 
@@ -12,11 +12,11 @@
 
 **缘起:** 用别人写的工具，总感觉不能随心所欲，于是自己写个下载管理工具，基本能用，基本满意
 
-**原理:** 下载网页，分析网页，文本保存在数据库中，转换为其他需要的格式
+**原理:** 下载网页，分析网页，文本保存在文本数据库中，转换为其他需要的格式
 
 **亮点:** 通用小说网站规则能覆盖大部分文字站的目录及正文内容分析，不需要针对每个网站的规则
 
-**依赖:** golang.org/x/text/encoding/simplifiedchinese    golang.org/x/net/webdav
+**依赖:** `golang.org/x/text/encoding/simplifiedchinese`    `golang.org/x/net/webdav`
 
 **旧版(2019-12-13之前)依赖:** https://github.com/axgle/mahonia
 
@@ -27,7 +27,7 @@
 **编译:**
 - 下载go: https://golang.google.cn/dl/   或   https://golang.org/dl/
 - 配置好 GOPATH
-  - 例如下载 go1.16.4.windows-amd64.zip 解压到 D:\，于是存在 D:\go 目录
+  - 例如下载 go1.17.3.windows-amd64.zip 解压到 D:\，于是存在 D:\go 目录
   - 准备一个放置源码的工作目录 D:\prj
   - Win + R 输入 cmd 回车进入命令行
   - cd /d D:\prj
@@ -66,12 +66,15 @@
 - 最小编译: go build -ldflags "-s -w" github.com/linpinger/foxbook-golang
 
 **小提示:**
+- foxbook-golang-x86.exe -h 可以查看命令行参数
+- foxbook-golang-x86.exe -v 可以查看常用用法
 - 把生成的exe重命名为http.exe，它就成了一个简单的http文件服务器:
   - http://127.0.0.1/ 可以看到当前目录
+  - http://127.0.0.1/webdav/ webdav服务器
   - http://127.0.0.1/f 这是上传文件的页面
+  - http://127.0.0.1/t 转换当前目录里的fml到mobi
   - http://127.0.0.1/fb/ 默认未开启，可以看到小说页面，如果当前目录存在 FoxBook.fml
   - http://127.0.0.1/foxcgi/xxx.exe  默认未开启，CGI程序(当前目录下存在 foxcgi/xxx.exe, xxx.exe是一个cgi程序，可以用AHK_L版脚本来写)
-- foxbook-golang-x86.exe -h 可以查看命令行参数
 - 如果是服务器模式，默认根目录为当前目录，默认端口为80(linux/mac下因权限问题需使用-p参数修改一下端口)
 
 ## 2018-06-12 交叉编译
@@ -97,6 +100,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2021-11-24: 修改: 重构项目结构
 - 2021-05-13: 添加: 使用go mod适应新版go1.16，http中添加webDAV，什么设置都不改的话，可以用 `curl -X PROPFIND -H "Depth: 1" http://fox:book@127.0.0.1:80/webdav/` 查看返回的目录信息
 - 2020-11-11: 修改: 修改GetTOC/Last相关代码
 - 2020-05-21: 修改: 修改server相关代码

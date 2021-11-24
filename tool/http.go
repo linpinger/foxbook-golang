@@ -1,5 +1,4 @@
-// testGet
-package foxhttp
+package tool
 
 import (
 	"bytes"
@@ -7,7 +6,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/linpinger/foxbook-golang/site"
 	"golang.org/x/text/encoding/simplifiedchinese"
 )
 
@@ -27,6 +24,7 @@ Host: www.wutuxs.com
 User-Agent: Go-http-client/1.1
 Accept-Encoding: gzip
 */
+/*
 func main() {
 	tocURL := "http://www.wutuxs.com/html/7/7868/"
 
@@ -50,7 +48,7 @@ func main() {
 	fmt.Println("- HTTP请求耗时:", eTime)
 
 }
-
+*/
 type FoxHTTPClient struct {
 	httpClient *http.Client
 }
@@ -70,11 +68,11 @@ func (fhc *FoxHTTPClient) do(fr *FoxRequest) []byte {
 		switch response.Header.Get("Content-Encoding") {
 		case "gzip":
 			gzrd, _ := gzip.NewReader(response.Body)
-			bys, _ := ioutil.ReadAll(gzrd)
+			bys, _ := ReadAll(gzrd)
 			return bys
 			break
 		default:
-			bys, _ := ioutil.ReadAll(response.Body)
+			bys, _ := ReadAll(response.Body)
 			return bys
 		}
 	}
@@ -95,7 +93,7 @@ func (fhc *FoxHTTPClient) GetHTML(fr *FoxRequest) string {
 	html := ""
 	for i := 1; i <= 3; i++ {
 		html = string(fhc.do(fr))
-		if site.TestHtmlOK(html) {
+		if TestHtmlOK(html) {
 			break
 		}
 	}
@@ -234,6 +232,6 @@ func PostFile(filePath string, postURL string) string { // http://www.golangnote
 		return ""
 	}
 	defer res.Body.Close()
-	bys, _ := ioutil.ReadAll(res.Body)
+	bys, _ := ReadAll(res.Body)
 	return string(bys)
 }

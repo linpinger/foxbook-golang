@@ -1,12 +1,9 @@
-package site
+package tool
 
 import (
 	"regexp"
 	"strings"
 )
-
-// "fmt"
-// "io/ioutil"
 
 func TestHtmlOK(html string) bool {
 	isOK := false
@@ -304,7 +301,7 @@ func Qidian_GetContent_Touch7_Ajax(jsonStr string) string {
 // var p = fmt.Println
 
 // func main() {
-// 	bb, _ := ioutil.ReadFile("T:/index.html")
+// 	bb, _ := tool.ReadFile("T:/index.html")
 
 // 	lk := GetTOCLast(string(bb))
 // 	for _, l := range lk {

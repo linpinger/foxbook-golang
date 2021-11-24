@@ -1,14 +1,12 @@
-package fml
+package ebook
 
 import (
 	"bytes"
-	"fmt"
-	"io/ioutil"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
-	"time"
+
+	"github.com/linpinger/foxbook-golang/tool"
 )
 
 // http://docscn.studygolang.com/pkg/
@@ -44,7 +42,7 @@ func getValue(inSrc []byte, inKey string) []byte {
 }
 
 func loadFML(fmlPath string) []Book {
-	fml, _ := ioutil.ReadFile(fmlPath)
+	fml, _ := tool.ReadFile(fmlPath)
 	var shelf []Book
 	var chapters []Page
 	var bs, be int = 0, 0
@@ -122,9 +120,10 @@ func saveFML(shelf []Book, savePath string) {
 		buf.WriteString("</chapters>\n</novel>\n\n")
 	}
 	buf.WriteString("</shelf>\n")
-	ioutil.WriteFile(savePath, buf.Bytes(), os.ModePerm)
+	tool.WriteFile(savePath, buf.Bytes(), os.ModePerm)
 }
 
+/*
 func SimpleFML(bkName string, bkURL string, bkAuthor string, bkQDID string, savePath string) {
 	var buf bytes.Buffer
 	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\n<shelf>\n\n")
@@ -142,35 +141,9 @@ func SimpleFML(bkName string, bkURL string, bkAuthor string, bkQDID string, save
 	buf.WriteString("</chapters>\n</novel>\n\n")
 	buf.WriteString("</shelf>\n")
 
-	ioutil.WriteFile(savePath, buf.Bytes(), os.ModePerm)
+	tool.WriteFile(savePath, buf.Bytes(), os.ModePerm)
 }
-
-func GetCookie(cookiePath string) map[string]string {
-	cookie := make(map[string]string)
-	ckbs, _ := ioutil.ReadFile(cookiePath)
-	reck, _ := regexp.Compile("(?smi)<cookies>(.*)</cookies>")
-	cks := reck.FindSubmatch(ckbs)
-	bk, _ := regexp.Compile("(?smi)<([a-z0-9]*)>(.*?)</[^>]*>")
-	sss := bk.FindAllSubmatch(cks[1], -1)
-	for _, xx := range sss {
-		if string(xx[1]) == "cookies" {
-			continue
-		}
-		cookie[string(xx[1])] = string(xx[2])
-	}
-	return cookie
-}
-
-// func cookie2Field(cookieStr string) string {
-// 	var oStr string
-// 	for _, ss := range strings.Split(cookieStr, "\n") {
-// 		if strings.Contains(ss, "\t") {
-// 			ff := strings.Split(ss, "\t")
-// 			oStr += ff[5] + "=" + ff[6] + "; "
-// 		}
-// 	}
-// 	return oStr
-// }
+*/
 
 func SimplifyDelList(inDelList string) string { // 精简为9条记录
 	lines := strings.Split(inDelList, "\n")
@@ -249,6 +222,7 @@ func (book *Book) GetBookAllPageStr() string { // 获取某书的所有章节列
 	return ss
 }
 
+/*
 func main() {
 	sTime := time.Now()
 	shelf := NewShelf("T:/x/wutuxs.fml")
@@ -263,3 +237,4 @@ func main() {
 	fmt.Println("- save fml Time =", eTime.String())
 
 }
+*/
