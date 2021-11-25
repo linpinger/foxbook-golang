@@ -33,7 +33,7 @@ func (hh *HandlerFML2MOBI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, fi := range fis {
 		if strings.HasSuffix(fi.Name(), ".fml") {
 			fmlPath := hh.httpRootDir + "/" + fi.Name()
-			if "mix.fml" == fi.Name() || "wutuxs.fml" == fi.Name() || "qidian.fml" == fi.Name() {
+			if "mix.fml" == fi.Name() || "wutuxs.fml" == fi.Name() || "9txs.fml" == fi.Name() || "qidian.fml" == fi.Name() {
 				FML2EBook(hh.httpRootDir+"/"+time.Now().Format("02150405")+".mobi", fmlPath, -1, true)
 			} else { // 起点
 				oNameNoExt := strings.TrimSuffix(fi.Name(), filepath.Ext(fi.Name()))

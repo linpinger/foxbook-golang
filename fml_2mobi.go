@@ -5,18 +5,19 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/linpinger/foxbook-golang/ebook"
 	"github.com/linpinger/foxbook-golang/tool"
 )
 
-func FMLs2Mobi(fmlDir string) {
+func FMLs2EBook(fmlDir string, iFormat string) {
 	fis, _ := tool.ReadDir(fmlDir)
 	for _, fi := range fis {
 		if strings.HasSuffix(fi.Name(), ".fml") {
 			fmlPath := fmlDir + "/" + fi.Name()
-			FML2EBook("automobi", fmlPath, -1, true)
-			fmt.Println("- to mobi:", fmlPath)
+			FML2EBook(iFormat, fmlPath, -1, true)
+			fmt.Println("- to", iFormat, ":", fmlPath)
 		}
 	}
 }
@@ -28,19 +29,20 @@ func FML2EBook(ebookPath string, fmlPath string, bookIDX int, bSmallMobi bool) *
 	oBookAuthor := ""
 	oBookName := strings.TrimSuffix(filepath.Base(fmlPath), filepath.Ext(fmlPath))
 	if bookIDX < 0 { // 所有书
-		oBookName = "all_" + oBookName
-		if "automobi" == ebookPath {
-			ebookPath = filepath.Dir(fmlPath) + "/" + oBookName + ".mobi"
+		if oBookName == "mix" || oBookName == "wutuxs" || oBookName == "9txs" || oBookName == "qidian" {
+			oBookName = time.Now().Format("02150405.000")
+		} else {
+			oBookName = "all_" + oBookName
 		}
-		if "autoepub" == ebookPath {
-			ebookPath = filepath.Dir(fmlPath) + "/" + oBookName + ".epub"
+		if "mobi" == ebookPath || "epub" == ebookPath || "azw3" == ebookPath {
+			ebookPath = filepath.Dir(fmlPath) + "/" + oBookName + "." + ebookPath
 		}
 	} else {
 		oBookName = string(shelf.Books[bookIDX].Bookname)
 		oBookAuthor = string(shelf.Books[bookIDX].Author)
 	}
 
-	bk := ebook.NewEPubWriter(oBookName)
+	bk := ebook.NewEPubWriter(oBookName, ebookPath)
 	bk.SetTempDir(filepath.Dir(ebookPath)) // 临时文件夹放到ebook保存目录
 
 	//	bk.SetBodyFont("Zfull-GB") // 2018-06: Kindle升级固件后5.9.6，这个字体显示异常
@@ -78,6 +80,6 @@ func FML2EBook(ebookPath string, fmlPath string, bookIDX int, bSmallMobi bool) *
 	if bSmallMobi {
 		bk.SetMobiUseHideArg()
 	}
-	bk.SaveTo(ebookPath)
+	bk.SaveTo()
 	return shelf
 }

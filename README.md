@@ -2,7 +2,7 @@
 
 **名称:** FoxBook
 
-**功能:** 狐狸的小说下载阅读及转换工具(下载小说站小说，制作为mobi,epub格式，http/webdav/cgi服务器)
+**功能:** 狐狸的小说下载阅读及转换工具(下载小说站小说，制作为mobi,epub,azw3格式，http/webdav/cgi服务器)
 
 **作者:** 爱尔兰之狐(linpinger)
 
@@ -16,11 +16,14 @@
 
 **亮点:** 通用小说网站规则能覆盖大部分文字站的目录及正文内容分析，不需要针对每个网站的规则
 
-**依赖:** `golang.org/x/text/encoding/simplifiedchinese`    `golang.org/x/net/webdav`
+**依赖:** `golang.org/x/text/encoding/simplifiedchinese`    `golang.org/x/net/webdav` `github.com/leotaku/mobi`
+
+**感谢:** 2021-11-25: 非常感谢 github.com/leotaku/mobi 这个库，它让我们摆脱了x86 cpu的限制，可以在arm或其他golang支持的平台下生成azw3格式，意味着我们可以在手机/路由上生成azw3文件，而不需要开电脑了，结合本程序的http服务器功能，可以直接让kindle直接通过浏览器访问手机热点，从手机上下载电子书了
 
 **旧版(2019-12-13之前)依赖:** https://github.com/axgle/mahonia
 
 **预编译版的下载地址:**
+- 见项目release: https://github.com/linpinger/foxbook-golang/releases
 - 已编译的不一定是最新的，谁叫我懒呢，可使用-v参数查看版本，需与更新日志日期一致才是最新版，目前包含win 32/64位，linux x86/x64位，MacOSX x64位
 - SF(慢，好像没有限制): http://master.dl.sourceforge.net/project/foxtestphp/prj/foxbook-golang-bin.zip
 
@@ -100,6 +103,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2021-11-25: 添加: 转换为azw3格式，不依赖kindlege，故可以做到全平台都可以转换，已经在安卓手机上成功转换文本到azw3格式
 - 2021-11-24: 修改: 重构项目结构
 - 2021-05-13: 添加: 使用go mod适应新版go1.16，http中添加webDAV，什么设置都不改的话，可以用 `curl -X PROPFIND -H "Depth: 1" http://fox:book@127.0.0.1:80/webdav/` 查看返回的目录信息
 - 2020-11-11: 修改: 修改GetTOC/Last相关代码

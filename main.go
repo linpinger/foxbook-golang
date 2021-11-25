@@ -34,14 +34,16 @@ var (
 )
 
 func printVersionInfo() {
-	fmt.Printf(`Version : 2021-11-24 public
+	fmt.Printf(`Version : 2021-11-25 public
 Compiler: go1.17.3 linux/amd64
 Usage   : %[1]s [args] [filePath]
 Example :
 	%[1]s -c "D:/cookie/file/path" FoxBook.fml
+	%[1]s -to all_xx.azw3 xx.fml
 	%[1]s -to all_xx.mobi xx.fml
 	%[1]s -to xx.mobi -idx 0 all.fml
 	%[1]s -to dir2mobi -d /dev/shm/00/
+	%[1]s -to dir2azw3 -d /sdcard/
 
 	%[1]s -p 8080 -U "FoxBook" -d "D:/http/root/dir/path/"
 	%[1]s -gu http://127.0.0.1/f [-U uastr] [fileName.path]
@@ -182,7 +184,7 @@ func main() {
 	var getURL, postURL, ebookSavePath string
 	flag.StringVar(&getURL, "gu", "", "Tool: Download a File, Set UserAgent with -U option")
 	flag.StringVar(&postURL, "pu", "http://127.0.0.0/f", "Tool: POST a File to This URL")
-	flag.StringVar(&ebookSavePath, "to", "", "ebook: mobi/epub save path or dir2mobi or automobi or autoepub")
+	flag.StringVar(&ebookSavePath, "to", "", "ebook: mobi/epub/azw3 save path or dir2mobi or dir2azw3 or dir2epub")
 	var ebookIDX int
 	flag.IntVar(&ebookIDX, "idx", -1, "ebook: index(0 base) of fml to mobi/epub")
 
@@ -209,8 +211,9 @@ func main() {
 		printVersionInfo()
 		os.Exit(0)
 	}
-	if "dir2mobi" == ebookSavePath {
-		FMLs2Mobi(rootDir)
+
+	if ebookSavePath == "dir2mobi" || ebookSavePath == "dir2azw3" || ebookSavePath == "dir2epub" {
+		FMLs2EBook(rootDir, strings.TrimPrefix(ebookSavePath, "dir2"))
 		os.Exit(0)
 	}
 

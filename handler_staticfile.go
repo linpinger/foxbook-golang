@@ -66,9 +66,11 @@ func (sfh *HandlerStaticFile) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 				if isKindle { // Kindle 仅显示 mobi pdf
 					nowName = strings.ToLower(fi.Name())
 					if !strings.HasSuffix(nowName, ".mobi") {
-						if !strings.HasSuffix(nowName, ".azw") {
-							if !strings.HasSuffix(nowName, ".pdf") {
-								continue
+						if !strings.HasSuffix(nowName, ".azw3") {
+							if !strings.HasSuffix(nowName, ".azw") {
+								if !strings.HasSuffix(nowName, ".pdf") {
+									continue
+								}
 							}
 						}
 					}

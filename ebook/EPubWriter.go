@@ -1,6 +1,7 @@
 package ebook
 
-// 功能: 提供 EPubWriter 来生成epub/mobi
+// 功能: 提供 EPubWriter 来生成epub/mobi/azw3
+// 注意事项: mobi调用kindlegen生成，只在x86平台有效，azw3完全go写的，兼容性略差，但可全平台使用
 
 import (
 	"archive/zip"
@@ -11,26 +12,39 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	mrand "math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/leotaku/mobi"
 	"github.com/linpinger/foxbook-golang/tool"
+	"golang.org/x/text/language"
+)
+
+const (
+	FormatUnknown = iota
+	FormatEPub
+	FormatMobi
+	FormatAzw3
 )
 
 type ChapterItem struct {
-	ID    int
-	Title string
-	Level int
+	ID      int
+	Title   string
+	Content string
+	Level   int
 }
 
 type EPubWriter struct {
+	EBookSavePath   string
+	EBookFileFormat int
+
 	BMobiUseHideArg                                                       bool   // 转mobi时，是否使用隐藏参数以缩小体积
 	TmpDir                                                                string // 临时目录
-	EBookFileFormat                                                       int    // 0=unsupport, 1=epub, 2=mobi
 	BookName, BookCreator                                                 string
-	BookUUID                                                              string
 	DefNameNoExt, ImageExt, ImageMetaType, CoverImgNameNoExt, CoverImgExt string
 	CSS                                                                   string
 
@@ -38,14 +52,15 @@ type EPubWriter struct {
 	ChapterID int
 }
 
-func NewEPubWriter(bookName string) *EPubWriter {
+func NewEPubWriter(iBookName string, iEBookSavePath string) *EPubWriter {
 	var bk EPubWriter
 
+	bk.EBookSavePath = iEBookSavePath
+	bk.EBookFileFormat = FormatUnknown
+
 	bk.BMobiUseHideArg = false
-	bk.EBookFileFormat = 1
-	bk.BookName = bookName
+	bk.BookName = iBookName
 	bk.BookCreator = "爱尔兰之狐"
-	bk.BookUUID = GetGuid()
 	bk.DefNameNoExt = "FoxMake"
 	bk.ImageExt = "png"
 	bk.ImageMetaType = "image/png"
@@ -56,28 +71,72 @@ func NewEPubWriter(bookName string) *EPubWriter {
 	bk.Chapters = nil
 	bk.ChapterID = 100
 
-	// bk.TmpDir = filepath.Join(os.TempDir(), "FoxEpubTemp")
+	bk.guessOutFormat()
+	if bk.EBookFileFormat == FormatAzw3 {
+		bk.CSS = "h2,h3,h4{text-align:center;}\n.content { font-family: " + strings.Join([]string{"方", "正", "兰", "亭", "黑", "_GBK"}, "") + "; }"
+	}
+
 	bk.SetTempDir(os.TempDir())
 
 	return &bk
 }
 
-func (bk *EPubWriter) SetTempDir(iTempDir string) *EPubWriter {
-	bk.TmpDir = filepath.Join(iTempDir, "FoxEpubTemp")
-	if tool.FileExist(bk.TmpDir) {
-		os.RemoveAll(bk.TmpDir)
+func (bk *EPubWriter) guessOutFormat() {
+	eBookExt := strings.ToLower(filepath.Ext(bk.EBookSavePath))
+
+	switch eBookExt {
+	case ".epub":
+		bk.EBookFileFormat = FormatEPub
+	case ".mobi":
+		bk.EBookFileFormat = FormatMobi
+	case ".azw3":
+		bk.EBookFileFormat = FormatAzw3
+	default:
+		bk.EBookFileFormat = FormatUnknown
 	}
-	os.MkdirAll(bk.TmpDir+"/html", os.ModePerm)
+
+}
+
+func (bk *EPubWriter) SetTempDir(iTempDir string) *EPubWriter {
+	bk.TmpDir = filepath.Join(iTempDir, "FoxEbookTemp")
+	if bk.EBookFileFormat == FormatEPub || bk.EBookFileFormat == FormatMobi { // 需要创建临时目录的格式
+		if tool.FileExist(bk.TmpDir) {
+			os.RemoveAll(bk.TmpDir)
+		}
+		os.MkdirAll(bk.TmpDir+"/html", os.ModePerm)
+	}
 	return bk
 }
 
-func (bk *EPubWriter) SetMobiUseHideArg() *EPubWriter {
+func (bk *EPubWriter) SetMobiUseHideArg() *EPubWriter { // 只对 用kindlegen生成mobi 有效
 	bk.BMobiUseHideArg = true
 	return bk
 }
 
 func (bk *EPubWriter) SetBookName(iBookName string) *EPubWriter {
 	bk.BookName = iBookName
+	return bk
+}
+func (bk *EPubWriter) SetAuthor(iAuthor string) *EPubWriter {
+	bk.BookCreator = iAuthor
+	return bk
+}
+
+func (bk *EPubWriter) SetCSS(iCSS string) *EPubWriter {
+	bk.CSS = iCSS
+	return bk
+}
+
+func (bk *EPubWriter) AddChapter(iTitle string, iContent string) *EPubWriter { // 单级目录
+	return bk.AddChapterN(iTitle, iContent, 1)
+}
+func (bk *EPubWriter) AddChapterN(iTitle string, iContent string, iLevel int) *EPubWriter { // 多级目录
+	bk.ChapterID += 1
+	bk.Chapters = append(bk.Chapters, ChapterItem{bk.ChapterID, iTitle, iContent, iLevel})
+
+	if bk.EBookFileFormat == FormatEPub || bk.EBookFileFormat == FormatMobi { // 需要提前写入的格式
+		bk.createChapterHTML(iTitle, iContent, bk.ChapterID) // 生成章节页面
+	}
 	return bk
 }
 
@@ -88,23 +147,13 @@ func (bk *EPubWriter) createChapterHTML(Title string, Content string, iPageID in
 	return bk
 }
 
-func (bk *EPubWriter) AddChapter(Title string, Content string) *EPubWriter {
-	return bk.AddChapterN(Title, Content, 1)
-}
-func (bk *EPubWriter) AddChapterN(Title string, Content string, iLevel int) *EPubWriter {
-	bk.ChapterID += 1
-	bk.Chapters = append(bk.Chapters, ChapterItem{bk.ChapterID, Title, iLevel})
-	bk.createChapterHTML(Title, Content, bk.ChapterID) // 生成章节页面
-	return bk
-}
-
 func (bk *EPubWriter) createCSS() *EPubWriter { // 生成CSS
 	cssPath := fmt.Sprintf("%s/%s.css", bk.TmpDir, bk.DefNameNoExt)
 	tool.WriteFile(cssPath, []byte(bk.CSS), os.ModePerm)
 	return bk
 }
 
-func (bk *EPubWriter) createIndexHTM() *EPubWriter { // 生成索引页
+func (bk *EPubWriter) createIndexHTM() *EPubWriter { // 生成索引页epub/mobi
 	htmlPath := fmt.Sprintf("%s/%s.htm", bk.TmpDir, bk.DefNameNoExt)
 
 	var buf bytes.Buffer
@@ -118,10 +167,34 @@ func (bk *EPubWriter) createIndexHTM() *EPubWriter { // 生成索引页
 	return bk
 }
 
-func (bk *EPubWriter) createNCX() *EPubWriter { // 生成NCX
+func (bk *EPubWriter) createIndexHTMAzw3() string { // 生成索引页azw3
+	// 目录网页内容，这个body标签不符号规则，但就是有效
+	tocHTML := []string{fmt.Sprintf("<h2>%s</h2>\n<body class=\"content\">\n", bk.BookName)}
+	for _, it := range bk.Chapters {
+		tocHTML = append(tocHTML, fmt.Sprintf("%s<br />\n", it.Title))
+	}
+	/*
+		for _, book := range shelf.Books {
+			lastChapIDX := len(book.Chapters) - 1
+			for j, page := range book.Chapters {
+				if j == 0 { // 第一章
+					tocHTML = append(tocHTML, fmt.Sprintf("<h3>《%s》</h3>\n<ol>\n", string(book.Bookname)))
+				}
+				tocHTML = append(tocHTML, fmt.Sprintf("<li>%s</li>\n", string(page.Pagename)))
+				if j == lastChapIDX { // 尾章
+					tocHTML = append(tocHTML, "\n</ol>\n")
+				}
+			}
+		}
+	*/
+	tocHTML = append(tocHTML, "\n</body>\n")
+	return strings.Join(tocHTML, "")
+}
+
+func (bk *EPubWriter) createNCX(uuid string) *EPubWriter { // 生成NCX
 	htmlPath := fmt.Sprintf("%s/%s.ncx", bk.TmpDir, bk.DefNameNoExt)
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE ncx PUBLIC \"-//NISO//DTD ncx 2005-1//EN\" \"http://www.daisy.org/z3986/2005/ncx-2005-1.dtd\">\n<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\" xml:lang=\"zh-cn\">\n<head>\n<meta name=\"dtb:uid\" content=\"%s\"/>\n<meta name=\"dtb:depth\" content=\"1\"/>\n<meta name=\"dtb:totalPageCount\" content=\"0\"/>\n<meta name=\"dtb:maxPageNumber\" content=\"0\"/>\n<meta name=\"dtb:generator\" content=\"%s\"/>\n</head>\n<docTitle><text>%s</text></docTitle>\n<docAuthor><text>%s</text></docAuthor>\n<navMap>\n", bk.BookUUID, bk.BookCreator, bk.BookName, bk.BookCreator))
+	buf.WriteString(fmt.Sprintf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE ncx PUBLIC \"-//NISO//DTD ncx 2005-1//EN\" \"http://www.daisy.org/z3986/2005/ncx-2005-1.dtd\">\n<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\" xml:lang=\"zh-cn\">\n<head>\n<meta name=\"dtb:uid\" content=\"%s\"/>\n<meta name=\"dtb:depth\" content=\"1\"/>\n<meta name=\"dtb:totalPageCount\" content=\"0\"/>\n<meta name=\"dtb:maxPageNumber\" content=\"0\"/>\n<meta name=\"dtb:generator\" content=\"%s\"/>\n</head>\n<docTitle><text>%s</text></docTitle>\n<docAuthor><text>%s</text></docAuthor>\n<navMap>\n", uuid, bk.BookCreator, bk.BookName, bk.BookCreator))
 
 	buf.WriteString(fmt.Sprintf("\t<navPoint id=\"toc\" playOrder=\"1\"><navLabel><text>目录:%s</text></navLabel><content src=\"%s.htm\"/></navPoint>\n", bk.BookName, bk.DefNameNoExt))
 	DisOrder := 1
@@ -159,10 +232,10 @@ func (bk *EPubWriter) createNCX() *EPubWriter { // 生成NCX
 	return bk
 }
 
-func (bk *EPubWriter) createOPF() string { // 生成OPF
+func (bk *EPubWriter) createOPF(uuid string) string { // 生成OPF
 	htmlPath := fmt.Sprintf("%s/%s.opf", bk.TmpDir, bk.DefNameNoExt)
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<package xmlns=\"http://www.idpf.org/2007/opf\" version=\"2.0\" unique-identifier=\"FoxUUID\">\n<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">\n\t<dc:title>%s</dc:title>\n\t<dc:identifier opf:scheme=\"uuid\" id=\"FoxUUID\">%s</dc:identifier>\n\t<dc:creator>%s</dc:creator>\n\t<dc:publisher>%s</dc:publisher>\n\t<dc:language>zh-cn</dc:language>\n", bk.BookName, bk.BookUUID, bk.BookCreator, bk.BookCreator))
+	buf.WriteString(fmt.Sprintf("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<package xmlns=\"http://www.idpf.org/2007/opf\" version=\"2.0\" unique-identifier=\"FoxUUID\">\n<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">\n\t<dc:title>%s</dc:title>\n\t<dc:identifier opf:scheme=\"uuid\" id=\"FoxUUID\">%s</dc:identifier>\n\t<dc:creator>%s</dc:creator>\n\t<dc:publisher>%s</dc:publisher>\n\t<dc:language>zh-cn</dc:language>\n", bk.BookName, uuid, bk.BookCreator, bk.BookCreator))
 	// 封面图片
 	ManiImg := ""
 	if tool.FileExist(fmt.Sprintf("%s/%s%s", bk.TmpDir, bk.CoverImgNameNoExt, bk.CoverImgExt)) {
@@ -175,7 +248,7 @@ func (bk *EPubWriter) createOPF() string { // 生成OPF
 			ManiImg = fmt.Sprintf("\t<item id=\"FoxCover\" media-type=\"image/gif\" href=\"%s%s\" />\n", bk.CoverImgNameNoExt, bk.CoverImgExt)
 		}
 	}
-	if bk.EBookFileFormat == 2 { // 0=unsupport, 1=epub, 2=mobi
+	if bk.EBookFileFormat == FormatMobi { // 0=unsupport, 1=epub, 2=mobi
 		buf.WriteString("\t<x-metadata><output encoding=\"utf-8\"></output></x-metadata>\n")
 	}
 	buf.WriteString("</metadata>\n\n\n<manifest>\n")
@@ -203,111 +276,145 @@ func (bk *EPubWriter) createEpubMiscFiles() *EPubWriter { // 生成 epub 必须�
 	return bk
 }
 
-func (bk *EPubWriter) SaveTo(eBookSavePath string) { // 生成 ebook，根据后缀生成不同格式mobi/epub
-	if 100 == bk.ChapterID { // 没有内容
+func (bk *EPubWriter) doSomeThingBeforeExit() {
+	if bk.EBookFileFormat == FormatEPub || bk.EBookFileFormat == FormatMobi {
 		os.RemoveAll(bk.TmpDir)
+	}
+}
+
+func (bk *EPubWriter) SaveTo() { // 生成 ebook
+	if 100 == bk.ChapterID { // 没有内容
+		bk.doSomeThingBeforeExit()
 		return
 	}
-	eBookExt := strings.ToLower(filepath.Ext(eBookSavePath))
-	if eBookExt == ".epub" { // 0=unsupport, 1=epub, 2=mobi
-		bk.EBookFileFormat = 1
-	} else if eBookExt == ".mobi" {
-		bk.EBookFileFormat = 2
-	} else {
-		bk.EBookFileFormat = 0
+
+	if bk.EBookFileFormat == FormatAzw3 {
+		tocHTML := bk.createIndexHTMAzw3()
+
+		mb := mobi.Book{
+			Title:       bk.BookName,
+			Authors:     []string{bk.BookCreator},
+			CreatedDate: time.Now(),
+			Language:    language.SimplifiedChinese,
+			Chapters:    []mobi.Chapter{mobi.Chapter{Title: "目录", Chunks: mobi.Chunks(tocHTML)}},
+			UniqueID:    mrand.Uint32(),
+			CSSFlows:    []string{bk.CSS},
+		}
+
+		for _, it := range bk.Chapters {
+			ch := mobi.Chapter{
+				Title:  it.Title,
+				Chunks: mobi.Chunks(fmt.Sprintf("<h3>%s</h3>\n<body class=\"content\">\n%s\n</body>\n", it.Title, it.Content)),
+			}
+			mb.Chapters = append(mb.Chapters, ch)
+		}
+
+		db := mb.Realize() // Convert book to PalmDB database
+
+		// Write database to file
+		f, _ := os.Create(bk.EBookSavePath)
+		defer f.Close()
+		err := db.Write(f)
+		if err != nil {
+			fmt.Println("# Error: write azw3 to file: ", err)
+		}
 	}
 
-	bk.createCSS()
-	bk.createIndexHTM()
-	bk.createNCX()
-	opfPath := bk.createOPF()
-	bk.createEpubMiscFiles()
+	if bk.EBookFileFormat == FormatEPub || bk.EBookFileFormat == FormatMobi {
+		bk.createCSS()
+		bk.createIndexHTM()
+		mobiUUID := GetGuid()
+		bk.createNCX(mobiUUID)
+		opfPath := bk.createOPF(mobiUUID)
+		bk.createEpubMiscFiles()
 
-	if 1 == bk.EBookFileFormat { // epub
-		epubFile, err := os.OpenFile(eBookSavePath, os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
-			return
-		}
-		defer epubFile.Close()
-		epub := zip.NewWriter(epubFile)
-
-		// mimetype 作为第一个不能压缩的文件
-		fih := new(zip.FileHeader)
-		fih.Name = "mimetype"
-		f, _ := epub.CreateHeader(fih)
-		f.Write([]byte("application/epub+zip"))
-
-		// 第二个文件
-		f, _ = epub.Create("META-INF/container.xml")
-		bs, _ := tool.ReadFile(bk.TmpDir + "/META-INF/container.xml")
-		f.Write(bs)
-
-		// 根目录下文件
-		rfis, _ := tool.ReadDir(bk.TmpDir)
-		for _, fis := range rfis {
-			if fis.IsDir() {
-				continue
+		if FormatEPub == bk.EBookFileFormat { // epub
+			epubFile, err := os.OpenFile(bk.EBookSavePath, os.O_WRONLY|os.O_CREATE, 0644)
+			if err != nil {
+				return
 			}
-			if fis.Name() == "mimetype" {
-				continue
-			}
+			defer epubFile.Close()
+			epub := zip.NewWriter(epubFile)
 
-			f, _ = epub.Create(fis.Name())
-			bs, _ = tool.ReadFile(bk.TmpDir + "/" + fis.Name())
+			// mimetype 作为第一个不能压缩的文件
+			fih := new(zip.FileHeader)
+			fih.Name = "mimetype"
+			f, _ := epub.CreateHeader(fih)
+			f.Write([]byte("application/epub+zip"))
+
+			// 第二个文件
+			f, _ = epub.Create("META-INF/container.xml")
+			bs, _ := tool.ReadFile(bk.TmpDir + "/META-INF/container.xml")
 			f.Write(bs)
-		}
 
-		// html下文件
-		hfis, _ := tool.ReadDir(bk.TmpDir + "/html/")
-		for _, fis := range hfis {
-			if fis.IsDir() {
-				continue
+			// 根目录下文件
+			rfis, _ := tool.ReadDir(bk.TmpDir)
+			for _, fis := range rfis {
+				if fis.IsDir() {
+					continue
+				}
+				if fis.Name() == "mimetype" {
+					continue
+				}
+
+				f, _ = epub.Create(fis.Name())
+				bs, _ = tool.ReadFile(bk.TmpDir + "/" + fis.Name())
+				f.Write(bs)
 			}
 
-			f, _ = epub.Create("html/" + fis.Name())
-			bs, _ = tool.ReadFile(bk.TmpDir + "/html/" + fis.Name())
-			f.Write(bs)
-		}
+			// html下文件
+			hfis, _ := tool.ReadDir(bk.TmpDir + "/html/")
+			for _, fis := range hfis {
+				if fis.IsDir() {
+					continue
+				}
 
-		epub.Close()
-	} else if 2 == bk.EBookFileFormat { // mobi
-		_, err := exec.LookPath("kindlegen")
-		if err != nil {
-			fmt.Println("木有找到kindlegen: ", err)
-		} else {
-			if bk.BMobiUseHideArg {
-				exec.Command("kindlegen", "-dont_append_source", opfPath).Output() // kindlegen的隐藏参数: 不追加源文件
+				f, _ = epub.Create("html/" + fis.Name())
+				bs, _ = tool.ReadFile(bk.TmpDir + "/html/" + fis.Name())
+				f.Write(bs)
+			}
+
+			epub.Close()
+		} else if FormatMobi == bk.EBookFileFormat { // mobi
+			_, err := exec.LookPath("kindlegen")
+			if err != nil {
+				fmt.Println("木有找到kindlegen: ", err)
 			} else {
-				exec.Command("kindlegen", opfPath).Output()
+				if bk.BMobiUseHideArg {
+					exec.Command("kindlegen", "-dont_append_source", opfPath).Output() // kindlegen的隐藏参数: 不追加源文件
+				} else {
+					exec.Command("kindlegen", opfPath).Output()
+				}
 			}
+			tool.FileCopy(bk.TmpDir+"/"+bk.DefNameNoExt+".mobi", bk.EBookSavePath)
 		}
-		tool.FileCopy(bk.TmpDir+"/"+bk.DefNameNoExt+".mobi", eBookSavePath)
-	}
-	os.RemoveAll(bk.TmpDir)
+	} // epub, mobi
+
+	bk.doSomeThingBeforeExit()
 }
 func (bk *EPubWriter) SetBodyFont(iFontNameOrPath string) *EPubWriter {
-	fontExt := strings.ToLower(filepath.Ext(iFontNameOrPath))
-	if fontExt == ".ttf" || fontExt == ".ttc" || fontExt == ".otf" {
-		fName := filepath.Base(iFontNameOrPath)
-		bk.CSS = bk.CSS + "\n@font-face { font-family: \"hei\"; src: url(\"../" + fName + "\"); }\n.content { font-family: \"hei\"; }\n\n"
-		tool.FileCopy(iFontNameOrPath, bk.TmpDir+"/"+fName)
-	} else {
-		bk.CSS = bk.CSS + "\n@font-face { font-family: \"hei\"; src: local(\"" + iFontNameOrPath + "\"); }\n.content { font-family: \"hei\"; }\n\n"
+	if bk.EBookFileFormat == FormatAzw3 {
+		bk.CSS = "h2,h3,h4{text-align:center;}\n.content { font-family: " + iFontNameOrPath + "; }"
+	}
+	if bk.EBookFileFormat == FormatEPub || bk.EBookFileFormat == FormatMobi {
+		fontExt := strings.ToLower(filepath.Ext(iFontNameOrPath))
+		if fontExt == ".ttf" || fontExt == ".ttc" || fontExt == ".otf" {
+			fName := filepath.Base(iFontNameOrPath)
+			bk.CSS = bk.CSS + "\n@font-face { font-family: \"hei\"; src: url(\"../" + fName + "\"); }\n.content { font-family: \"hei\"; }\n\n"
+			tool.FileCopy(iFontNameOrPath, bk.TmpDir+"/"+fName)
+		} else {
+			bk.CSS = bk.CSS + "\n@font-face { font-family: \"hei\"; src: local(\"" + iFontNameOrPath + "\"); }\n.content { font-family: \"hei\"; }\n\n"
+		}
 	}
 	return bk
 }
-func (bk *EPubWriter) SetAuthor(iAuthor string) *EPubWriter {
-	bk.BookCreator = iAuthor
-	return bk
-}
-func (bk *EPubWriter) SetCSS(iCSS string) *EPubWriter {
-	bk.CSS = iCSS
-	return bk
-}
+
 func (bk *EPubWriter) SetCover(imgPath string) *EPubWriter {
-	bk.CoverImgExt = filepath.Ext(imgPath)
-	if tool.FileExist(imgPath) {
-		tool.FileCopy(imgPath, bk.TmpDir+"/"+bk.CoverImgNameNoExt+bk.CoverImgExt)
+	if bk.EBookFileFormat == FormatEPub || bk.EBookFileFormat == FormatMobi {
+		bk.CoverImgExt = filepath.Ext(imgPath)
+		if tool.FileExist(imgPath) {
+			tool.FileCopy(imgPath, bk.TmpDir+"/"+bk.CoverImgNameNoExt+bk.CoverImgExt)
+		}
 	}
 	return bk
 }
@@ -333,7 +440,7 @@ func GetGuid() string {
 /*
 
 func main() {
-	bk := NewEPubWriter("FoxBook")
+	bk := NewEPubWriter("FoxBook", "./gogo.azw3")
 
 	bk.SetTempDir("T:/")
 	bk.SetBookName("哈哈哈哈")
@@ -349,7 +456,7 @@ func main() {
 	bk.AddChapterN("你好Kfsjdkfj标题4", "<p>xxxxxxxxxx</p>\n<p>fsldkfas你好啊暗示等级分可视4</p>\n", 1)
 
 	// bk.SetMobiUseHideArg() // mobi减小体积，对epub无效
-	bk.SaveTo("./gogo.mobi")
+	bk.SaveTo()
 
 	fmt.Println(bk.BookName, " done")
 }
