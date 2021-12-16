@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/linpinger/foxbook-golang/tool"
+	"github.com/linpinger/golib/tool"
 )
 
 // 全局变量

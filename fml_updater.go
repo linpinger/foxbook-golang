@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/linpinger/foxbook-golang/ebook"
-	"github.com/linpinger/foxbook-golang/tool"
+	"github.com/linpinger/golib/ebook"
+	"github.com/linpinger/golib/tool"
 )
 
 var hc *tool.FoxHTTPClient

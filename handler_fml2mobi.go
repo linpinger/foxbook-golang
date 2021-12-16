@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/linpinger/foxbook-golang/tool"
+	"github.com/linpinger/golib/tool"
 )
 
 type HandlerFML2MOBI struct {

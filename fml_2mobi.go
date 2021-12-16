@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/linpinger/foxbook-golang/ebook"
-	"github.com/linpinger/foxbook-golang/tool"
+	"github.com/linpinger/golib/ebook"
+	"github.com/linpinger/golib/tool"
 )
 
 func FMLs2EBook(fmlDir string, iFormat string) {

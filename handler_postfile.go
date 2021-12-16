@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/linpinger/foxbook-golang/tool"
+	"github.com/linpinger/golib/tool"
 )
 
 var HtmlHead string = `<!DOCTYPE html>
