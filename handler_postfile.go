@@ -121,8 +121,7 @@ func NewHandlerPostFile(w http.ResponseWriter, r *http.Request) {
 				newName = ffh.Filename
 			} else { // 最大可能是 curl 上传的
 				// 文件名 xx[1]: GBK -> UTF-8
-				re := regexp.MustCompile("filename=\"(.*)\"")
-				newName = re.FindStringSubmatch(tool.GBK2UTF8(ffh.Header.Get("Content-Disposition")))[1]
+				newName = regexp.MustCompile("filename=\"(.*)\"").FindStringSubmatch(tool.GBK2UTF8(ffh.Header.Get("Content-Disposition")))[1]
 				newName = filepath.Base(newName) // 如果包含路径，只取文件名
 			}
 

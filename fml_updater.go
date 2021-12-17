@@ -211,8 +211,7 @@ func getBookCase2GetBookIDX(shelf *ebook.Shelf, cookiePath string) []int { // �
 		return shelf.GetAllBookIDX() // 获取所有需更新的bookIDX
 	}
 
-	reLink, _ := regexp.Compile(res)
-	lks := reLink.FindAllStringSubmatch(html, -1)
+	lks := regexp.MustCompile(res).FindAllStringSubmatch(html, -1)
 	if nil == lks {
 		return shelf.GetAllBookIDX() // 获取所有需更新的bookIDX
 	}
@@ -255,10 +254,8 @@ func getBookCase2GetBookIDX(shelf *ebook.Shelf, cookiePath string) []int { // �
 func GetCookie(cookiePath string) map[string]string {
 	cookie := make(map[string]string)
 	ckbs, _ := tool.ReadFile(cookiePath)
-	reck, _ := regexp.Compile("(?smi)<cookies>(.*)</cookies>")
-	cks := reck.FindSubmatch(ckbs)
-	bk, _ := regexp.Compile("(?smi)<([a-z0-9]*)>(.*?)</[^>]*>")
-	sss := bk.FindAllSubmatch(cks[1], -1)
+	cks := regexp.MustCompile("(?smi)<cookies>(.*)</cookies>").FindSubmatch(ckbs)
+	sss := regexp.MustCompile("(?smi)<([a-z0-9]*)>(.*?)</[^>]*>").FindAllSubmatch(cks[1], -1)
 	for _, xx := range sss {
 		if string(xx[1]) == "cookies" {
 			continue
