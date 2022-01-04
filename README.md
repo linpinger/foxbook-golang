@@ -103,6 +103,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2021-12-27: 修改: 去除idx参数，简化转为mobi
 - 2021-11-25: 添加: 转换为azw3格式，不依赖kindlege，故可以做到全平台都可以转换，已经在安卓手机上成功转换文本到azw3格式
 - 2021-11-24: 修改: 重构项目结构
 - 2021-05-13: 添加: 使用go mod适应新版go1.16，http中添加webDAV，什么设置都不改的话，可以用 `curl -X PROPFIND -H "Depth: 1" http://fox:book@127.0.0.1:80/webdav/` 查看返回的目录信息
