@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/linpinger/golib/tool"
 )
@@ -32,13 +31,8 @@ func (hh *HandlerFML2MOBI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fis, _ := tool.ReadDir(hh.httpRootDir)
 	for _, fi := range fis {
 		if strings.HasSuffix(fi.Name(), ".fml") {
-			fmlPath := hh.httpRootDir + "/" + fi.Name()
-			if "mix.fml" == fi.Name() || "wutuxs.fml" == fi.Name() || "9txs.fml" == fi.Name() || "qidian.fml" == fi.Name() {
-				FML2EBook(hh.httpRootDir+"/"+time.Now().Format("02150405")+".mobi", fmlPath, -1, true)
-			} else { // 起点
-				oNameNoExt := strings.TrimSuffix(fi.Name(), filepath.Ext(fi.Name()))
-				FML2EBook(hh.httpRootDir+"/"+oNameNoExt+".mobi", fmlPath, 0, true)
-			}
+			fmlPath := filepath.Join(hh.httpRootDir, fi.Name())
+			FML2EBook(fmlPath, "mobi")
 			os.Remove(fmlPath) // 转换完毕后，删除fml
 		}
 	}

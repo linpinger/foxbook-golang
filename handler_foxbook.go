@@ -155,12 +155,12 @@ func (fbh *HandlerFoxBook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, rPath, http.StatusMovedPermanently)
 	case "ftom": // 转mobi
 		mobiName := strings.TrimSuffix(filepath.Base(fbh.shelfPath), filepath.Ext(fbh.shelfPath)) + ".mobi"
-		FML2EBook(filepath.Dir(fbh.shelfPath)+"/"+mobiName, fbh.shelfPath, -1, true)
+		FML2EBook(fbh.shelfPath, filepath.Dir(fbh.shelfPath)+"/"+mobiName)
 		http.Redirect(w, r, strings.Replace(rPath+"/"+mobiName, "//", "/", -1), http.StatusMovedPermanently)
 	case "ftop":
-		mobiName := strings.TrimSuffix(filepath.Base(fbh.shelfPath), filepath.Ext(fbh.shelfPath)) + ".epub"
-		FML2EBook(filepath.Dir(fbh.shelfPath)+"/"+mobiName, fbh.shelfPath, -1, false)
-		http.Redirect(w, r, strings.Replace(rPath+"/"+mobiName, "//", "/", -1), http.StatusMovedPermanently)
+		epubName := strings.TrimSuffix(filepath.Base(fbh.shelfPath), filepath.Ext(fbh.shelfPath)) + ".epub"
+		FML2EBook(fbh.shelfPath, filepath.Dir(fbh.shelfPath)+"/"+epubName)
+		http.Redirect(w, r, strings.Replace(rPath+"/"+epubName, "//", "/", -1), http.StatusMovedPermanently)
 	case "fla": // 所有
 		fmt.Fprint(w, HtmlHead)
 		fmt.Fprint(w, "\t<title>TOC</title>\n\t<style>\n", StyleLI, "\t</style>\n", HtmlHeadBodyC)

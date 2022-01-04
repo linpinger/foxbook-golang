@@ -23,7 +23,7 @@ var (
 	cookiePath   = "FoxBook.cookie"
 
 	bOpenUpload   = true
-	bOpenFML2Mobi = true
+	bOpenFML2Mobi = false
 	bOpenFB       = false
 	bOpenCGI      = false
 
@@ -34,16 +34,13 @@ var (
 )
 
 func printVersionInfo() {
-	fmt.Printf(`Version : 2021-11-25 public
-Compiler: go1.17.3 linux/amd64
+	fmt.Printf(`Version : 2021-12-27 public
 Usage   : %[1]s [args] [filePath]
 Example :
 	%[1]s -c "D:/cookie/file/path" FoxBook.fml
 	%[1]s -to all_xx.azw3 xx.fml
-	%[1]s -to all_xx.mobi xx.fml
-	%[1]s -to xx.mobi -idx 0 all.fml
+	%[1]s -to mobi all.fml
 	%[1]s -to dir2mobi -d /dev/shm/00/
-	%[1]s -to dir2azw3 -d /sdcard/
 
 	%[1]s -p 8080 -U "FoxBook" -d "D:/http/root/dir/path/"
 	%[1]s -gu http://127.0.0.1/f [-U uastr] [fileName.path]
@@ -185,8 +182,6 @@ func main() {
 	flag.StringVar(&getURL, "gu", "", "Tool: Download a File, Set UserAgent with -U option")
 	flag.StringVar(&postURL, "pu", "http://127.0.0.0/f", "Tool: POST a File to This URL")
 	flag.StringVar(&ebookSavePath, "to", "", "ebook: mobi/epub/azw3 save path or dir2mobi or dir2azw3 or dir2epub")
-	var ebookIDX int
-	flag.IntVar(&ebookIDX, "idx", -1, "ebook: index(0 base) of fml to mobi/epub")
 
 	// config
 	flag.StringVar(&listenPort, "p", listenPort, "server: Listen Port")
@@ -252,8 +247,8 @@ func main() {
 			os.Exit(0)
 		}
 
-		if "" != ebookSavePath { // to mobi/epub
-			FML2EBook(ebookSavePath, fmlPath, ebookIDX, true)
+		if "" != ebookSavePath { // to mobi/epub/azw3
+			FML2EBook(fmlPath, ebookSavePath)
 			os.Exit(0)
 		}
 
