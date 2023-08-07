@@ -103,6 +103,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2023-08-07: 修改: 起点url换成桌面版（更新太频繁了，旧的url已经不可用了），添加: `-ls`: 列出fml中book信息, `-ubt 0`: 更新idx=0的目录
 - 2021-12-27: 修改: 去除idx参数，简化转为mobi
 - 2021-11-25: 添加: 转换为azw3格式，不依赖kindlege，故可以做到全平台都可以转换，已经在安卓手机上成功转换文本到azw3格式
 - 2021-11-24: 修改: 重构项目结构
