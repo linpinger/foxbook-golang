@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/linpinger/golib/ebook"
 	"github.com/linpinger/golib/tool"
 )
 
@@ -34,7 +35,7 @@ var (
 )
 
 func printVersionInfo() {
-	fmt.Printf(`Version : 2021-12-27 public
+	fmt.Printf(`Version : 2023-08-07 public
 Usage   : %[1]s [args] [filePath]
 Example :
 	%[1]s -c "D:/cookie/file/path" FoxBook.fml
@@ -182,6 +183,10 @@ func main() {
 	flag.StringVar(&getURL, "gu", "", "Tool: Download a File, Set UserAgent with -U option")
 	flag.StringVar(&postURL, "pu", "http://127.0.0.0/f", "Tool: POST a File to This URL")
 	flag.StringVar(&ebookSavePath, "to", "", "ebook: mobi/epub/azw3 save path or dir2mobi or dir2azw3 or dir2epub")
+	var upBookIDX int
+	flag.IntVar(&upBookIDX, "ubt", -1, "ebook:update book's TOC")
+	var bListShelf bool
+	flag.BoolVar(&bListShelf, "ls", false, "switch: list books in fml")
 
 	// config
 	flag.StringVar(&listenPort, "p", listenPort, "server: Listen Port")
@@ -249,6 +254,19 @@ func main() {
 
 		if "" != ebookSavePath { // to mobi/epub/azw3
 			FML2EBook(fmlPath, ebookSavePath)
+			os.Exit(0)
+		}
+
+		if -1 != upBookIDX { // 更新某书目录
+			UpdateBookTOC(fmlPath, upBookIDX)
+			os.Exit(0)
+		}
+		if bListShelf {
+			shelf := ebook.NewShelf(fmlPath) // 读取fml
+			fmt.Println("#", "BookName", "TocURL")
+			for i, book := range shelf.Books {
+				fmt.Println(i, string(book.Bookname), string(book.Bookurl))
+			}
 			os.Exit(0)
 		}
 

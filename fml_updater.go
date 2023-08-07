@@ -14,6 +14,16 @@ import (
 
 var hc *tool.FoxHTTPClient
 
+func UpdateBookTOC(fmlPath string, bookIDX int) { // 导出函数，更新单本目录
+	hc = tool.NewFoxHTTPClient()
+
+	shelf := ebook.NewShelf(fmlPath) // 读取
+
+	fmt.Println("+ New Chapter Count :", getBookNewPages(&shelf.Books[bookIDX]))
+
+	shelf.Sort() // 排序
+	shelf.Save(fmlPath)
+}
 func UpdateShelf(fmlPath string, cookiePath string) *ebook.Shelf { // 导出函数，更新shelf
 	hc = tool.NewFoxHTTPClient()
 
@@ -73,8 +83,8 @@ func updatePageContent(shelf *ebook.Shelf, bookIDX int, pageIDX int, fmlName str
 	var nowLen int = 0
 	html := hc.GetHTML(tool.NewFoxRequest(inURL))
 	var textStr string
-	if tool.IsQidanContentURL_Touch7_Ajax(inURL) { // qidian
-		textStr = tool.Qidian_GetContent_Touch7_Ajax(html)
+	if tool.IsQidanContentURL_Desk8(inURL) { // qidian
+		textStr = tool.Qidian_GetContent_Desk8(html)
 	} else {
 		textStr = tool.GetContent(html)
 	}
@@ -143,22 +153,22 @@ func compare2GetNewPages(book *ebook.Book, toc [][]string) int { // 比较得到
 	return newPageCount
 }
 
-func getBookNewPages(book *ebook.Book) { // 下载toc并写入新章节
+func getBookNewPages(book *ebook.Book) int { // 下载toc并写入新章节
 	nowBookURL := string(book.Bookurl)
 	var bc [][]string
 	html := hc.GetHTML(tool.NewFoxRequest(nowBookURL))
 	if "" == html {
 		fmt.Println("- 目录下载失败，请重试  @ ", string(book.Bookname))
-		return
+		return -1
 	}
-	if tool.IsQidanTOCURL_Touch7_Ajax(nowBookURL) {
-		bc = tool.Qidian_GetTOC_Touch7_Ajax(html)
+	if tool.IsQidanTOCURL_Desk8(nowBookURL) {
+		bc = tool.Qidian_GetTOC_Desk8(html)
 	} else if strings.Contains(string(book.Delurl), "|") {
 		bc = tool.GetTOCLast(html)
 	} else {
 		bc = tool.GetTOC(html)
 	}
-	compare2GetNewPages(book, bc) // 比较得到新章节
+	return compare2GetNewPages(book, bc) // 比较得到新章节
 }
 
 func getBookCase2GetBookIDX(shelf *ebook.Shelf, cookiePath string) []int { // 更新书架获得要更新的bookIDX列表

@@ -147,6 +147,10 @@ func (fbh *HandlerFoxBook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		UpdateShelf(fbh.shelfPath, fbh.cookiePath)
 		fbh.shelf = ebook.NewShelf(fbh.shelfPath)
 		http.Redirect(w, r, rPath, http.StatusMovedPermanently)
+	case "fupt": // 更新单本目录
+		UpdateBookTOC(fbh.shelfPath, fbh.getIDX(r.FormValue("b")))
+		fbh.shelf = ebook.NewShelf(fbh.shelfPath)
+		http.Redirect(w, r, rPath, http.StatusMovedPermanently)
 	case "fcb": // 清空单本
 		fbh.shelf = fbh.shelf.ClearBook(fbh.getIDX(r.FormValue("b")))
 		http.Redirect(w, r, rPath, http.StatusMovedPermanently)
@@ -208,7 +212,7 @@ func (fbh *HandlerFoxBook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if nil != fbh.shelf {
 			fmt.Fprint(w, "\n<br>\n\n<ol>\n")
 			for i, book := range fbh.shelf.Books {
-				fmt.Fprintf(w, "\t<li><a href=\"?a=flb&b=%d\">%s</a> (%d) <a class=\"yy\" href=\"?a=fcb&b=%d&t=%s\">清空本书</a></li>\n", i, book.Bookname, len(book.Chapters), i, nowT)
+				fmt.Fprintf(w, "\t<li><a href=\"?a=flb&b=%d\" title=\"%s\">%s</a> (%d) <a class=\"yy\" href=\"?a=fcb&b=%d&t=%s\">清空本书</a>　<a class=\"yy\" href=\"?a=fupt&b=%d&t=%s\">更新目录</a></li>\n", i, book.Bookurl, book.Bookname, len(book.Chapters), i, nowT, i, nowT)
 			}
 			fmt.Fprint(w, "</ol>\n")
 		}
