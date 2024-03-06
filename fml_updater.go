@@ -85,6 +85,8 @@ func updatePageContent(shelf *ebook.Shelf, bookIDX int, pageIDX int, fmlName str
 	var textStr string
 	if tool.IsQidanContentURL_Desk8(inURL) { // qidian
 		textStr = tool.Qidian_GetContent_Desk8(html)
+	} else if JiuAi_Page_URL_Test(inURL) {
+		textStr = JiuAi_GetContent(html)
 	} else {
 		textStr = tool.GetContent(html)
 	}
@@ -163,6 +165,10 @@ func getBookNewPages(book *ebook.Book) int { // 下载toc并写入新章节
 	}
 	if tool.IsQidanTOCURL_Desk8(nowBookURL) {
 		bc = tool.Qidian_GetTOC_Desk8(html)
+	} else if tool.IsQidanTOCURL_Touch8(nowBookURL) {
+		bc = tool.Qidian_GetTOC_Touch8(html)
+	} else if JiuAi_TOC_URL_Test(nowBookURL) {
+		bc = JiuAi_GetTOC(html)
 	} else if strings.Contains(string(book.Delurl), "|") {
 		bc = tool.GetTOCLast(html)
 	} else {
@@ -285,3 +291,51 @@ func GetCookie(cookiePath string) map[string]string {
 // 	}
 // 	return oStr
 // }
+
+// { site: 2023-09-15, 2023-11-23:add 92xs.la
+func JiuAi_TOC_URL_Test(iURL string) bool {
+	if strings.Contains(iURL, ".92xs.la/html/") {
+		return true
+	}
+	if strings.Contains(iURL, ".92wx.la/html/") {
+		return true
+	}
+	return false
+}
+
+func JiuAi_Page_URL_Test(iURL string) bool {
+	if strings.Contains(iURL, ".92xs.la/html/") {
+		return true
+	}
+	if strings.Contains(iURL, ".92wx.la/html/") {
+		return true
+	}
+	return false
+}
+
+func JiuAi_GetTOC(html string) [][]string {
+	ss := regexp.MustCompile("(?smi)<table(.*)</table>").FindStringSubmatch(html)
+
+	// <a href="/html/76181/29059647.html">第二百二十八章</a>
+	lks := regexp.MustCompile("(?smi)<a href=\"([^\"]+)\">([^<]+)</a>").FindAllStringSubmatch(ss[1], -1)
+	if nil == lks {
+		return nil
+	}
+	var olks [][]string // [] ["", pageurl, pagename]
+	for _, lk := range lks {
+		olks = append(olks, []string{"", lk[1], lk[2]})
+	}
+	return olks
+}
+
+func JiuAi_GetContent(html string) string {
+	html = regexp.MustCompile("(?smi)<div[^>]*?tip[^>]*?>.*?92wx.la.*?</div>").ReplaceAllString(html, "")
+	html = regexp.MustCompile("(?smi)<div[^>]*?tip[^>]*?>.*?92xs.la.*?</div>").ReplaceAllString(html, "")
+	return tool.GetContent(html)
+}
+
+
+// } site: 2023-09-15
+
+// html, _ := os.ReadFile("T:/index.html")
+

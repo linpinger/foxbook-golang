@@ -35,7 +35,7 @@ var (
 )
 
 func printVersionInfo() {
-	fmt.Printf(`Version : 2023-08-07 public
+	fmt.Printf(`Version : 2024-03-06 public
 Usage   : %[1]s [args] [filePath]
 Example :
 	%[1]s -c "D:/cookie/file/path" FoxBook.fml
