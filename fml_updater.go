@@ -21,7 +21,8 @@ func UpdateBookTOC(fmlPath string, bookIDX int) { // 导出函数，更新单本
 
 	fmt.Println("+ New Chapter Count :", getBookNewPages(&shelf.Books[bookIDX]))
 
-	shelf.Sort() // 排序
+	shelf.SortBooksAsc() // 排序
+//	shelf.SortBooksDesc() // 排序
 	shelf.Save(fmlPath)
 }
 func UpdateShelf(fmlPath string, cookiePath string) *ebook.Shelf { // 导出函数，更新shelf
@@ -69,7 +70,8 @@ func UpdateShelf(fmlPath string, cookiePath string) *ebook.Shelf { // 导出函�
 	wgp.Wait()
 
 	if len(blankPages) > 0 { // 有新章节，序列化结构
-		shelf.Sort() // 排序
+		shelf.SortBooksAsc() // 排序
+//		shelf.SortBooksDesc() // 排序
 		shelf.Save(fmlPath)
 	}
 	fmt.Println("> End of Update:", fmlName)
@@ -85,6 +87,8 @@ func updatePageContent(shelf *ebook.Shelf, bookIDX int, pageIDX int, fmlName str
 	var textStr string
 	if tool.IsQidanContentURL_Desk8(inURL) { // qidian
 		textStr = tool.Qidian_GetContent_Desk8(html)
+	} else if Uuks_Page_URL_Test(inURL) {
+		textStr = Uuks_GetContent(html)
 	} else if JiuAi_Page_URL_Test(inURL) {
 		textStr = JiuAi_GetContent(html)
 	} else {
@@ -292,22 +296,22 @@ func GetCookie(cookiePath string) map[string]string {
 // 	return oStr
 // }
 
-// { site: 2023-09-15, 2023-11-23:add 92xs.la
+// { site: 2023-09-15, 2023-11-23:add 92xs.info
 func JiuAi_TOC_URL_Test(iURL string) bool {
-	if strings.Contains(iURL, ".92xs.la/html/") {
+	if strings.Contains(iURL, ".92xs.info/html/") {
 		return true
 	}
-	if strings.Contains(iURL, ".92wx.la/html/") {
+	if strings.Contains(iURL, ".92xs.la/html/") {
 		return true
 	}
 	return false
 }
 
 func JiuAi_Page_URL_Test(iURL string) bool {
-	if strings.Contains(iURL, ".92xs.la/html/") {
+	if strings.Contains(iURL, ".92xs.info/html/") {
 		return true
 	}
-	if strings.Contains(iURL, ".92wx.la/html/") {
+	if strings.Contains(iURL, ".92xs.la/html/") {
 		return true
 	}
 	return false
@@ -329,13 +333,26 @@ func JiuAi_GetTOC(html string) [][]string {
 }
 
 func JiuAi_GetContent(html string) string {
-	html = regexp.MustCompile("(?smi)<div[^>]*?tip[^>]*?>.*?92wx.la.*?</div>").ReplaceAllString(html, "")
 	html = regexp.MustCompile("(?smi)<div[^>]*?tip[^>]*?>.*?92xs.la.*?</div>").ReplaceAllString(html, "")
+	html = regexp.MustCompile("(?smi)<div[^>]*?tip[^>]*?>.*?92xs.info.*?</div>").ReplaceAllString(html, "")
 	return tool.GetContent(html)
 }
 
 
 // } site: 2023-09-15
+
+// { site: 2024-04-30
+func Uuks_Page_URL_Test(iURL string) bool {
+	if strings.Contains(iURL, ".uuks5.com/book/") {
+		return true
+	}
+	return false
+}
+func Uuks_GetContent(html string) string {
+	html = regexp.MustCompile("(?smi)<div style=\"margin: 15px 0\">.*?</div>").ReplaceAllString(html, "")
+	return tool.GetContent(html)
+}
+// } site: 2024-04-30
 
 // html, _ := os.ReadFile("T:/index.html")
 
