@@ -35,9 +35,11 @@ var (
 )
 
 func printVersionInfo() {
-	fmt.Printf(`Version : 2024-08-28 public
+	fmt.Printf(`Version : 2024-08-30 public
 Usage   : %[1]s [args] [filePath]
 Example :
+	%[1]s -ls xx.fml
+	%[1]s -ubt 0 xx.fml
 	%[1]s -c "D:/cookie/file/path" FoxBook.fml
 	%[1]s -to all_xx.azw3 xx.fml
 	%[1]s -to mobi all.fml
@@ -53,12 +55,6 @@ func mapFmlName(inName string) string {
 	var outName string
 
 	switch inName {
-	case "jt":
-		outName = "9txs.fml"
-	case "mb":
-		outName = "miaobige.fml"
-	case "wt":
-		outName = "wutuxs.fml"
 	case "qd":
 		outName = "qidian.fml"
 	case "fb":
@@ -187,6 +183,8 @@ func main() {
 	flag.IntVar(&upBookIDX, "ubt", -1, "ebook:update book's TOC")
 	var bListShelf bool
 	flag.BoolVar(&bListShelf, "ls", false, "switch: list books in fml")
+	var bDescDelBlankPage bool
+	flag.BoolVar(&bDescDelBlankPage, "dc", false, "switch: desc clear blank pages of book")
 
 	// config
 	flag.StringVar(&listenPort, "p", listenPort, "server: Listen Port")
@@ -261,12 +259,16 @@ func main() {
 			UpdateBookTOC(fmlPath, upBookIDX)
 			os.Exit(0)
 		}
-		if bListShelf {
+		if bListShelf { // 列出 索引，书名，URL
 			shelf := ebook.NewShelf(fmlPath) // 读取fml
 			fmt.Println("#", "BookName", "TocURL")
 			for i, book := range shelf.Books {
 				fmt.Println(i, string(book.Bookname), string(book.Bookurl))
 			}
+			os.Exit(0)
+		}
+		if bDescDelBlankPage { // 倒序删除内容字节小于3000的章节
+			ebook.NewShelf(fmlPath).DescDelBlankPage(true).Save(fmlPath) // true: 全清, false: 标记=1的忽略
 			os.Exit(0)
 		}
 
