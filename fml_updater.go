@@ -57,7 +57,7 @@ func UpdateShelf(fmlPath string, cookiePath string) *ebook.Shelf { // 导出函�
 		wgt.Wait()
 	}
 
-	blankPages := shelf.GetAllBlankPages(false) // ret: []PageLoc
+	blankPages := shelf.GetAllBlankPages(5000) // ret: []PageLoc
 	// 根据 blankPages 更新所有空白章节，并写入结构
 	var wgp sync.WaitGroup
 	for _, pl := range blankPages {

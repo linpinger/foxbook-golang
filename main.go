@@ -35,7 +35,7 @@ var (
 )
 
 func printVersionInfo() {
-	fmt.Printf(`Version : 2024-08-30 public
+	fmt.Printf(`Version : 2024-10-10 public
 Usage   : %[1]s [args] [filePath]
 Example :
 	%[1]s -ls xx.fml
