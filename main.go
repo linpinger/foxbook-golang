@@ -35,7 +35,7 @@ var (
 )
 
 func printVersionInfo() {
-	fmt.Printf(`Version : 2024-10-10 public
+	fmt.Printf(`Version : 2025-01-02 public
 Usage   : %[1]s [args] [filePath]
 Example :
 	%[1]s -ls xx.fml
@@ -183,8 +183,8 @@ func main() {
 	flag.IntVar(&upBookIDX, "ubt", -1, "ebook:update book's TOC")
 	var bListShelf bool
 	flag.BoolVar(&bListShelf, "ls", false, "switch: list books in fml")
-	var bDescDelBlankPage bool
-	flag.BoolVar(&bDescDelBlankPage, "dc", false, "switch: desc clear blank pages of book")
+	var maxPageLen int
+	flag.IntVar(&maxPageLen, "dc", 0, "ebook: desc clear pages where page.len < maxPageLen 推荐值6000")
 
 	// config
 	flag.StringVar(&listenPort, "p", listenPort, "server: Listen Port")
@@ -261,14 +261,20 @@ func main() {
 		}
 		if bListShelf { // 列出 索引，书名，URL
 			shelf := ebook.NewShelf(fmlPath) // 读取fml
-			fmt.Println("#", "BookName", "TocURL")
+			fmt.Println("#", "IDX", "BookName", "QiDianID", "BookURL")
 			for i, book := range shelf.Books {
-				fmt.Println(i, string(book.Bookname), string(book.Bookurl))
+				fmt.Println("#", i, string(book.Bookname), string(book.QidianBookID), string(book.Bookurl)) // Bookname, Bookurl, Delurl, Statu, QidianBookID, Author Chapters
+				if len(book.Chapters) > 0 {
+					fmt.Println("  -", "IDX", "Size", "PageName", "PageURL")
+					for j, page := range book.Chapters {
+						fmt.Println("  -", j, len(page.Content), string(page.Pagename), string(page.Pageurl)) // Pagename, Pageurl, Content, Size
+					}
+				}
 			}
 			os.Exit(0)
 		}
-		if bDescDelBlankPage { // 倒序删除内容字节小于3000的章节
-			ebook.NewShelf(fmlPath).DescDelBlankPage(true).Save(fmlPath) // true: 全清, false: 标记=1的忽略
+		if maxPageLen > 0 { // 倒序删除内容字节小于3000的章节
+			ebook.NewShelf(fmlPath).DescDelBlankPage(true, maxPageLen).Save(fmlPath) // true: 全清, false: 标记=1的忽略
 			os.Exit(0)
 		}
 
