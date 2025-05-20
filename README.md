@@ -104,6 +104,7 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```
 
 **更新日志:**
+- 2025-05-20: 修改: 获取ip方式，添加: `DEBUG`环境变量，`DebugWriteFile(content)`，添加站点: deqixs，83zws，xiguasuwu，92yanqing，其中有多页的模板
 - 2024-08-30: 添加: 倒序清空内容字节小于3000的章节
 - 2024-08-28: 修改: 几个站点，排序方法
 - 2023-08-07: 修改: 起点url换成桌面版（更新太频繁了，旧的url已经不可用了），添加: `-ls`: 列出fml中book信息, `-ubt 0`: 更新idx=0的目录

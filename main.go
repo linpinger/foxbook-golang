@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/linpinger/golib/ebook"
 	"github.com/linpinger/golib/tool"
@@ -17,6 +18,8 @@ import (
 
 // 全局变量
 var (
+	DEBUG        = false
+
 	listenPort   = "80"
 	rootDir      = "."
 	logPath      = ""
@@ -35,7 +38,7 @@ var (
 )
 
 func printVersionInfo() {
-	fmt.Printf(`Version : 2025-01-02 public
+	fmt.Printf(`Version : 2025-05-20 public
 Usage   : %[1]s [args] [filePath]
 Example :
 	%[1]s -ls xx.fml
@@ -68,26 +71,44 @@ func mapFmlName(inName string) string {
 
 /*
 func init() {
-//	log.SetFlags( log.Ltime | log.Lmicroseconds | log.Lshortfile ) // log.LstdFlags  DEBUG
+//	log.SetFlags( log.Ltime | log.Lmicroseconds | log.Lshortfile ) // log.LstdFlags
 	log.SetFlags(log.Ltime)
 	log.SetPrefix("- ")
 }
 */
 
 func printLocalIPList() {
-	addrs, errl := net.InterfaceAddrs() // 获取本地IP
-	if errl == nil {
-		for _, addr := range addrs {
-			if strings.Contains(addr.String(), ":") {
-				continue
-			} // ipv6
-			if strings.Contains(addr.String(), "127.0.0.1") {
-				continue
-			}
-			fmt.Println("# IP:", addr.String())
+	// 获取所有网络接口
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "# 获取网络接口时出错: %v\n", err)
+		return
+	}
+
+	for _, iface := range ifaces {
+		// 获取该接口的所有地址
+		addrs, err := iface.Addrs()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "# 获取接口 %s 的地址时出错: %v\n", iface.Name, err)
+			continue
 		}
-	} else {
-		fmt.Fprintln(os.Stderr, "# Error: Get Local IP:", errl)
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			// 过滤掉 127.0.0.1 和以 169.254 开头的地址
+			if ip != nil &&!ip.IsLoopback() &&!ip.IsLinkLocalUnicast() {
+				if ip.To4() != nil &&!(ip[0] == 169 && ip[1] == 254) {
+					fmt.Printf("# IP: %s, %s\n", ip, iface.Name)
+				}
+			}
+		}
 	}
 }
 
@@ -108,6 +129,12 @@ func FindFileInDirList(fName string, posDirList []string) string {
 	if !tool.FileExist(fName) {
 		fName = ""
 	}
+	return fName
+}
+
+func DebugWriteFile(content string) string {
+	fName := fmt.Sprintf("debug_%010d.txt", time.Now().UnixNano()/100%1e10)
+	os.WriteFile(fName , []byte(content), 0666)
 	return fName
 }
 
@@ -173,6 +200,7 @@ func main() {
 	flag.BoolVar(&bOpenCGI, "cgi", bOpenCGI, "server switch: /foxcgi/ to use CGI, Put bin here")
 	var bVersion bool
 	flag.BoolVar(&bVersion, "v", false, "switch: print Version And Examples")
+	flag.BoolVar(&IsUpWriteBadContent, "uwbc", IsUpWriteBadContent, "switch: whether write len(Content) < 6000 when updatePage")
 
 	// tool: postURL 依赖: fmlPath
 	var getURL, postURL, ebookSavePath string
@@ -204,6 +232,10 @@ func main() {
 	flag.Parse() // 处理参数
 
 	// start
+	envDebug := os.Getenv("DEBUG")
+	if "1" == envDebug || "true" == envDebug {
+		DEBUG = true
+	}
 
 	if bVersion { // -v
 		printVersionInfo()

@@ -13,6 +13,8 @@ import (
 )
 
 var hc *tool.FoxHTTPClient
+var UPContentMaxLength int = 6000    // 正文有效最小长度
+var IsUpWriteBadContent bool = true  // 更新时是否写入无效内容 < UPContentMaxLength
 
 func UpdateBookTOC(fmlPath string, bookIDX int) { // 导出函数，更新单本目录
 	hc = tool.NewFoxHTTPClient()
@@ -57,7 +59,7 @@ func UpdateShelf(fmlPath string, cookiePath string) *ebook.Shelf { // 导出函�
 		wgt.Wait()
 	}
 
-	blankPages := shelf.GetAllBlankPages(5000) // ret: []PageLoc
+	blankPages := shelf.GetAllBlankPages(UPContentMaxLength) // ret: []PageLoc
 	// 根据 blankPages 更新所有空白章节，并写入结构
 	var wgp sync.WaitGroup
 	for _, pl := range blankPages {
@@ -84,15 +86,34 @@ func updatePageContent(shelf *ebook.Shelf, bookIDX int, pageIDX int, fmlName str
 
 	var nowLen int = 0
 	html := hc.GetHTML(tool.NewFoxRequest(inURL))
+	if DEBUG {
+		fmt.Println("- Page URL:", inURL, "->", DebugWriteFile(html))
+	}
 	var textStr string
 	if tool.IsQidanContentURL_Desk8(inURL) { // qidian
 		textStr = tool.Qidian_GetContent_Desk8(html)
-	} else if Uuks_Page_URL_Test(inURL) {
-		textStr = Uuks_GetContent(html)
-	} else if JiuAi_Page_URL_Test(inURL) {
-		textStr = JiuAi_GetContent(html)
+	} else if Page_URL_Test_deqixs(inURL) {
+		textStr = GetContent_deqixs(html, inURL, "") // 分页
+	} else if TOC_URL_Test_83zws(inURL) {
+		textStr = GetContent_83zws(html, inURL, "") // 分页
+	} else if TOC_URL_Test_xiguasuwu(inURL) {
+		textStr = GetContent_xiguasuwu(html, inURL, "") // 分页
+	} else if Page_URL_Test_92yanqing(inURL) {
+		textStr = GetContent_92yanqing(html, inURL, "") // 分页
+	} else if Page_URL_Test_uuks5(inURL) {
+		textStr = GetContent_uuks5(html)
+	} else if TOC_URL_Test_92xs(inURL) {
+		textStr = GetContent_92xs(html)
 	} else {
 		textStr = tool.GetContent(html)
+	}
+
+	if ! IsUpWriteBadContent {
+		if len(textStr) < UPContentMaxLength {
+			page.Content = []byte("")
+			page.Size = []byte("0")
+			return
+		}
 	}
 	nowLen = len(textStr) / 3 // UTF-8 占3个字节，非精确计算
 	page.Content = []byte(textStr)
@@ -167,12 +188,19 @@ func getBookNewPages(book *ebook.Book) int { // 下载toc并写入新章节
 		fmt.Println("- 目录下载失败，请重试  @ ", string(book.Bookname))
 		return -1
 	}
+	if DEBUG {
+		fmt.Println("- TOC URL:", nowBookURL, "->", DebugWriteFile(html))
+	}
 	if tool.IsQidanTOCURL_Desk8(nowBookURL) {
 		bc = tool.Qidian_GetTOC_Desk8(html)
 	} else if tool.IsQidanTOCURL_Touch8(nowBookURL) {
 		bc = tool.Qidian_GetTOC_Touch8(html)
-	} else if JiuAi_TOC_URL_Test(nowBookURL) {
-		bc = JiuAi_GetTOC(html)
+	} else if TOC_URL_Test_92xs(nowBookURL) {
+		bc = GetTOC_92xs(html)
+	} else if TOC_URL_Test_83zws(nowBookURL) {
+		bc = GetTOC_83zws(html)
+	} else if TOC_URL_Test_xiguasuwu(nowBookURL) {
+		bc = GetTOC_xiguasuwu(html)
 	} else if strings.Contains(string(book.Delurl), "|") {
 		bc = tool.GetTOCLast(html)
 	} else {
@@ -297,7 +325,7 @@ func GetCookie(cookiePath string) map[string]string {
 // }
 
 // { site: 2023-09-15, 2023-11-23:add 92xs.info
-func JiuAi_TOC_URL_Test(iURL string) bool {
+func TOC_URL_Test_92xs(iURL string) bool {
 	if strings.Contains(iURL, ".92xs.info/html/") {
 		return true
 	}
@@ -307,17 +335,7 @@ func JiuAi_TOC_URL_Test(iURL string) bool {
 	return false
 }
 
-func JiuAi_Page_URL_Test(iURL string) bool {
-	if strings.Contains(iURL, ".92xs.info/html/") {
-		return true
-	}
-	if strings.Contains(iURL, ".92xs.la/html/") {
-		return true
-	}
-	return false
-}
-
-func JiuAi_GetTOC(html string) [][]string {
+func GetTOC_92xs(html string) [][]string {
 	ss := regexp.MustCompile("(?smi)<table(.*)</table>").FindStringSubmatch(html)
 
 	// <a href="/html/76181/29059647.html">第二百二十八章</a>
@@ -332,7 +350,7 @@ func JiuAi_GetTOC(html string) [][]string {
 	return olks
 }
 
-func JiuAi_GetContent(html string) string {
+func GetContent_92xs(html string) string {
 	html = regexp.MustCompile("(?smi)<div[^>]*?tip[^>]*?>.*?92xs.la.*?</div>").ReplaceAllString(html, "")
 	html = regexp.MustCompile("(?smi)<div[^>]*?tip[^>]*?>.*?92xs.info.*?</div>").ReplaceAllString(html, "")
 	return tool.GetContent(html)
@@ -342,17 +360,167 @@ func JiuAi_GetContent(html string) string {
 // } site: 2023-09-15
 
 // { site: 2024-04-30
-func Uuks_Page_URL_Test(iURL string) bool {
+func Page_URL_Test_uuks5(iURL string) bool {
 	if strings.Contains(iURL, ".uuks5.com/book/") {
 		return true
 	}
 	return false
 }
-func Uuks_GetContent(html string) string {
+func GetContent_uuks5(html string) string {
 	html = regexp.MustCompile("(?smi)<div style=\"margin: 15px 0\">.*?</div>").ReplaceAllString(html, "")
 	return tool.GetContent(html)
 }
 // } site: 2024-04-30
 
-// html, _ := os.ReadFile("T:/index.html")
+// { site: 2025-05-15
+func Page_URL_Test_deqixs(iURL string) bool {
+	if strings.Contains(iURL, ".deqixs.com/xiaoshuo/") {
+		return true
+	}
+	return false
+}
+func GetContent_deqixs(html, iURL, oldStr string) string {
+	var strB strings.Builder
+	nextURL := ""
+	strB.WriteString(oldStr)
+	match := regexp.MustCompile("(?smi)<div class=\"con\">(.*?)</div>.*?<span><a href=\"([^\"]*)\">下一").FindStringSubmatch(html)
+	if len(match) == 3 {
+		strB.WriteString(match[1])
+		nextURL = match[2]
+	} else { // 正则匹配错误
+		return ""
+	}
+	if strings.Contains(nextURL, "-") { // 有下一页
+		fullURL := tool.GetFullURL(nextURL, iURL)
+		htmlNext := hc.GetHTML(tool.NewFoxRequest(fullURL))
+		return GetContent_deqixs(htmlNext, fullURL, strB.String())
+	}
+	return tool.GetContent(strB.String())
+}
+// } site: 2025-05-15
+
+// { site: 2025-05-20
+
+func TOC_URL_Test_83zws(iURL string) bool {
+	// https://www.83zws.com/book/374/374738/
+	if strings.Contains(iURL, ".83zws.com/book/") {
+		return true
+	}
+	return false
+}
+func GetTOC_83zws(html string) [][]string {
+	return tool.GetTOCLast(strings.Replace( strings.Replace(html, "<dd>", "", -1), "</dd>", "", -1 ))
+}
+func GetContent_83zws(html, iURL, oldStr string) string { // 2页
+	var strB strings.Builder
+	nextURL := ""
+	nextName := ""
+	strB.WriteString(oldStr)
+	match := regexp.MustCompile("(?smi)<div id=\"booktxt\">(.*?)</div>.*?<a href=\"([^\"]*)\"[^>]*next_url[^>]*>([^<]*)</a>").FindStringSubmatch(html)
+	if len(match) == 4 {
+		strB.WriteString(match[1])
+		nextURL  = match[2]
+		nextName = match[3]
+	} else { // 正则匹配错误
+		return ""
+	}
+	if DEBUG {
+		fmt.Println("- ", iURL, nextURL, nextName)
+	}
+	// <a href="/book/374/374738/113708776_2.html" rel="next" id="next_url">下一页</a>
+	if strings.Contains(nextName, "下一页") { // 有下一页
+		fullURL := tool.GetFullURL(nextURL, iURL)
+		htmlNext := hc.GetHTML(tool.NewFoxRequest(fullURL))
+		return GetContent_83zws(htmlNext, fullURL, strB.String())
+	}
+	return tool.GetContent( strings.Replace( strB.String(), "83中文网最新地址www.83zws.com", "", -1 ) )
+}
+
+
+func TOC_URL_Test_xiguasuwu(iURL string) bool {
+// https://www.xiguasuwu.com/512/512050/
+// https://www.xiguasuwu.com/indexlist/512/512050/1.html
+// https://www.xiguasuwu.com/indexlist/512/512050/6.html
+	if strings.Contains(iURL, "xiguasuwu.com/") {
+		return true
+	}
+	return false
+}
+func GetTOC_xiguasuwu(html string) [][]string {
+	match := regexp.MustCompile("(?smi)<dl [^>]*>(.*?)</dl>").FindStringSubmatch(html)
+	if len(match) == 2 {
+		return GetReverseTOC( tool.GetTOC(match[1]) )
+	} else { // 正则匹配错误
+		return tool.GetTOCLast(html)
+	}
+	// [] ["", pageurl, pagename]
+}
+func GetContent_xiguasuwu(html, iURL, oldStr string) string { // 4页
+	var strB strings.Builder
+	nextURL := ""
+	nextName := ""
+	strB.WriteString(oldStr)
+	match := regexp.MustCompile("(?smi)<div id=\"booktxt\">(.*?)</div>.*?<a [^>]*linkNext[^>]* href=\"([^\"]*)\"[^>]*>([^<]*)<").FindStringSubmatch(html)
+	if len(match) == 4 {
+		strB.WriteString(match[1])
+		nextURL  = match[2]
+		nextName = match[3]
+	} else { // 正则匹配错误
+		return ""
+	}
+	if DEBUG {
+		fmt.Println("- ", iURL, nextURL, nextName)
+	}
+	// <a href="/book/374/374738/113708776_2.html" rel="next" id="next_url">下一页</a>
+	if strings.Contains(nextName, "下一页") { // 有下一页
+		fullURL := tool.GetFullURL(nextURL, iURL)
+		htmlNext := hc.GetHTML(tool.NewFoxRequest(fullURL))
+		return GetContent_xiguasuwu(htmlNext, fullURL, strB.String())
+	}
+	return tool.GetContent( strB.String() )
+}
+
+func Page_URL_Test_92yanqing(iURL string) bool {
+	if strings.Contains(iURL, ".92yanqing.com/read/") {
+		return true
+	}
+	return false
+}
+func GetContent_92yanqing(html, iURL, oldStr string) string {
+	var strB strings.Builder
+	nextURL := ""
+	nextName := ""
+	strB.WriteString(oldStr)
+	match := regexp.MustCompile("(?smi)<div *id=\"booktxt\">(.*?)</div>.*?<a href=\"([^\"]*)\"[^>]*next_url\">([^<]*)<").FindStringSubmatch(html)
+	if len(match) == 4 {
+		strB.WriteString(match[1])
+		nextURL  = match[2]
+		nextName = match[3]
+	} else { // 正则匹配错误
+		return ""
+	}
+	if DEBUG {
+		fmt.Println("- ", iURL, nextURL, nextName)
+	}
+	// <a href="/read/83643/41940838_2.html"  rel="next" id="next_url">下一页</a>
+	if strings.Contains(nextName, "下一页") { // 有下一页
+		fullURL := tool.GetFullURL(nextURL, iURL)
+		htmlNext := hc.GetHTML(tool.NewFoxRequest(fullURL))
+		return GetContent_92yanqing(htmlNext, fullURL, strB.String())
+	}
+	return tool.GetContent( strB.String() )
+}
+
+// } site: 2025-05-20
+
+// html, _ := os.ReadFile("index.html")
+
+// 反转TOC，针对取头部倒序的列表
+func GetReverseTOC(s [][]string) [][]string {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
+}
+
 
