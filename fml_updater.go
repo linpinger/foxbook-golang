@@ -16,6 +16,63 @@ var hc *tool.FoxHTTPClient
 var UPContentMaxLength int = 6000    // 正文有效最小长度
 var IsUpWriteBadContent bool = true  // 更新时是否写入无效内容 < UPContentMaxLength
 
+func UpdateTOCofLenFML(fmlPath string) { // 导出函数，更新len.fml的目录
+	hc = tool.NewFoxHTTPClient()
+
+	shelf := ebook.NewShelf(fmlPath) // 读取
+
+	for i, book := range shelf.Books {
+		if string(book.Statu) == "1" {
+			continue
+		}
+	
+		nowBookURL := string(book.Bookurl)
+		if ! tool.IsQidanTOCURL_Touch8(nowBookURL) {
+			continue
+		}
+
+		html := hc.GetHTML(tool.NewFoxRequest(nowBookURL))
+		if "" == html {
+			fmt.Println("- 目录下载失败，请重试  @ ", string(book.Bookname))
+			return
+		}
+		if DEBUG {
+			fmt.Println("- TOC URL:", nowBookURL, "->", DebugWriteFile(html))
+		}
+
+		bc := Qidian_GetTOC_Touch8_Full(html)
+		newPagesCount := compare2GetNewPages(&shelf.Books[i], bc) // 比较并写入新章节
+		if newPagesCount > 0 {
+			fmt.Println("+", newPagesCount, "New Chapters @", string(book.Bookname) )
+		} else {
+			fmt.Println("- No New Chapter :", string(book.Bookname) )
+		}
+
+	} // end of book
+
+	shelf.SortBooksAsc() // 排序
+	//	shelf.SortBooksDesc() // 排序
+	shelf.Save(fmlPath)
+}
+
+func Qidian_GetTOC_Touch8_Full(html string) [][]string {
+	jsonStr := regexp.MustCompile("(?smi)\"application/json\">(.+)</script>").FindStringSubmatch(html)
+	mID := regexp.MustCompile("(?i)\"bookId\":\"([0-9]+)\",").FindStringSubmatch(jsonStr[1])
+
+	// {"uuid":5,"cN":"第一章 最后一天","uT":"2025-01-01 11:07","cnt":2990,"cU":"","id":822923824,"sS":1}
+	// {"uuid":284,"cN":"第二百六十六章 情报网","uT":"2025-05-20 20:13","cnt":2226,"cU":"","id":841858846,"sS":0}
+	// 1:章名 2:更新时间 3:字数 4:pageID
+	lks := regexp.MustCompile("(?mi)\"cN\":\"([^\"]+)\",\"uT\":\"([^\"]+)\",\"cnt\":([0-9]+),[^,]+,\"id\":([0-9]+),").FindAllStringSubmatch(jsonStr[1], -1)
+	if nil == lks {
+		return nil
+	}
+	var olks [][]string // [] ["", pageurl, pagename, qidianSize, qidianUpdateTime]
+	for _, lk := range lks {
+		olks = append(olks, []string{"", tool.Qidian_getContentURL_Touch8(lk[4], mID[1]), lk[1], lk[3], lk[2]})
+	}
+	return olks
+}
+
 func UpdateBookTOC(fmlPath string, bookIDX int) { // 导出函数，更新单本目录
 	hc = tool.NewFoxHTTPClient()
 
@@ -169,7 +226,15 @@ func compare2GetNewPages(book *ebook.Book, toc [][]string) int { // 比较得到
 		if i >= idxInTOC {
 			if !strings.Contains(locPageStr, lk[1]+"|") {
 				newPageCount += 1
-				chapters = append(chapters, ebook.Page{[]byte(lk[2]), []byte(lk[1]), nil, []byte("0")})
+				if DEBUG {
+					fmt.Println("  +", len(lk), lk[1], lk[2])
+				}
+				if 3 == len(lk) { // 通用的 : ["", pageurl, pagename]
+					chapters = append(chapters, ebook.Page{[]byte(lk[2]), []byte(lk[1]), nil, []byte("0")})
+				}
+				if 5 == len(lk) { // len.fml : ["", pageurl, pagename, qidianSize, qidianUpdateTime]
+					chapters = append(chapters, ebook.Page{[]byte(lk[2]), []byte(lk[1]), []byte(lk[4]), []byte(lk[3])})
+				}
 			}
 		}
 	}
