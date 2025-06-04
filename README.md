@@ -16,7 +16,9 @@
 
 **亮点:** 通用小说网站规则能覆盖大部分文字站的目录及正文内容分析，不需要针对每个网站的规则
 
-**依赖:** `golang.org/x/text/encoding/simplifiedchinese`    `golang.org/x/net/webdav` `github.com/leotaku/mobi`
+**依赖:** `golang.org/x/text/encoding/simplifiedchinese` `golang.org/x/net/webdav` `github.com/leotaku/mobi` `github.com/d5/tengo`
+
+**感谢:** 2025-06-01: 非常感谢 `github.com/d5/tengo` 这个库，它让我们拥有了自己的脚本语言，通过扩展可以自定义各站点的更新规则
 
 **感谢:** 2021-11-25: 非常感谢 github.com/leotaku/mobi 这个库，它让我们摆脱了x86 cpu的限制，可以在arm或其他golang支持的平台下生成azw3格式，意味着我们可以在手机/路由上生成azw3文件，而不需要开电脑了，结合本程序的http服务器功能，可以直接让kindle直接通过浏览器访问手机热点，从手机上下载电子书了
 
@@ -24,6 +26,7 @@
 
 **预编译版的下载地址:**
 - go版本(支持7及以上): `go1.20.11` ，备注：最后支持xp的版本: `1.17`
+- 本项目为支持7: `go.mod`中text的版本: `golang.org/x/text v0.21.0 // indirect`
 - 见项目release: https://github.com/linpinger/foxbook-golang/releases
 - 已编译的不一定是最新的，谁叫我懒呢，可使用-v参数查看版本，需与更新日志日期一致才是最新版，目前包含win 32/64位，linux x86/x64位，MacOSX x64位
 - SF(慢，好像没有限制): http://master.dl.sourceforge.net/project/foxtestphp/prj/foxbook-golang-bin.zip
@@ -103,7 +106,43 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 
 ```
 
+## 2025-06-01 加入tengo脚本支持
+
+- https://github.com/d5/tengo
+
+- 在更新站点时: 例如 https://m.qidian.com/book/123456/catalog/ 会先根据URL获取该站点的domain=qidian.com
+
+- 然后会依次在环境变量 `TengoDir` 目录 `.` `./tengo/` 中查找 `qidian.com.tengo` 文件，找到就读入该内容
+
+- 执行tengo脚本前，会设置几个tengo变量: iType="toc"或"page"  iURL="https://m.qidian.com/book/123456/catalog/"  下载好的html
+
+- 然后执行上面找到的tengo脚本
+
+- 执行tengo脚本后，tengo脚本需要返回`oStr`变量，内容根据iType的不同而不同：
+  - 当 iType="toc" 时，应返回目录链接的json字符串变量`oStr`，字符串结构为: [ {"href": "111.html", "text": "标题111"}, {"href": "nnn.html", "text": "标题nnn"} ]
+  - 当 iType="page" 时，应返回正文字符串变量`oStr`，字符串为正文纯文本
+
+- 主程序会在执行脚本后，获取tengo变量`oStr`的内容并处理
+
+- 如果没找到tengo脚本，或返回的为空，会执行内置的默认处理规则
+
+- 目前tengo脚本定义了几个自定义函数，以后会根据需要增删，用法如下:
+
+```golang
+fox := import("fox")
+
+html := fox.gethtml("https://xxx.com/sss/aaa").body
+
+// 返回: https://xxx.com/xxx/nnn.html
+fullURL := fox.getfullurl("/xxx/nnn.html", "https://xxx.com/aaa/bbb/")
+
+```
+
+- tengo语法类似golang，但也有不同，建议看下它源码里面的例子 https://github.com/d5/tengo/
+
+
 **更新日志:**
+- 2025-06-04: 添加: 重大修改: 引入tengo脚本以支持自定义站点规则，exe大了1.2M，但为了扩展性值得
 - 2025-05-20: 修改: 获取ip方式，添加: `DEBUG`环境变量，`DebugWriteFile(content)`，添加站点: deqixs，83zws，xiguasuwu，92yanqing，其中有多页的模板
 - 2024-08-30: 添加: 倒序清空内容字节小于3000的章节
 - 2024-08-28: 修改: 几个站点，排序方法

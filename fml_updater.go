@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/d5/tengo/v2"
 	"github.com/linpinger/golib/ebook"
 	"github.com/linpinger/golib/tool"
 )
@@ -15,6 +17,53 @@ import (
 var hc *tool.FoxHTTPClient
 var UPContentMaxLength int = 6000    // 正文有效最小长度
 var IsUpWriteBadContent bool = true  // 更新时是否写入无效内容 < UPContentMaxLength
+
+// Chapter 定义 JSON 对象的结构
+type Chapter struct {
+	Href string `json:"href"`
+	Text string `json:"text"`
+}
+
+// jsonStr: [{"href":"xxx.html", "text":"xxTitle"}, {...}]
+func addNewPagesFromJson(book *ebook.Book, jsonStr string) int { // 比较jsonStr得到新章节
+	var chpts []Chapter
+	err := json.Unmarshal([]byte(jsonStr), &chpts)
+	if err != nil {
+		fmt.Println("# Error: JSON 解析错误:", err)
+		return -1
+	}
+
+	// 参考 fml_updater.go: compare2GetNewPages()
+	newPageCount := 0
+	chapters := book.Chapters
+
+	locPageStr := book.GetBookAllPageStr()
+	lastHref := getUrlFromPageStr(locPageStr, false) // 尾部链接
+
+	if "" == lastHref || ! strings.Contains(jsonStr, lastHref) { // jsonStr中全部都是新章节
+		for _, chpt := range chpts {
+			newPageCount += 1
+			chapters = append(chapters, ebook.Page{[]byte(chpt.Text), []byte(chpt.Href), nil, []byte("0")})
+		}
+	} else { // 获取json中lastHref之后的
+		bFindLast := false
+		for _, chpt := range chpts {
+			if lastHref == chpt.Href {
+				bFindLast = true
+				continue
+			}
+			if bFindLast {
+				newPageCount += 1
+				chapters = append(chapters, ebook.Page{[]byte(chpt.Text), []byte(chpt.Href), nil, []byte("0")})
+			}
+		}
+	}
+
+	if newPageCount > 0 {
+		book.Chapters = chapters
+	}
+	return newPageCount
+}
 
 func UpdateTOCofLenFML(fmlPath string) { // 导出函数，更新len.fml的目录
 	hc = tool.NewFoxHTTPClient()
@@ -141,28 +190,52 @@ func updatePageContent(shelf *ebook.Shelf, bookIDX int, pageIDX int, fmlName str
 	page := &shelf.Books[bookIDX].Chapters[pageIDX]
 	inURL := tool.GetFullURL(string(page.Pageurl), string(shelf.Books[bookIDX].Bookurl))
 
-	var nowLen int = 0
 	html := hc.GetHTML(tool.NewFoxRequest(inURL))
 	if DEBUG {
 		fmt.Println("- Page URL:", inURL, "->", DebugWriteFile(html))
 	}
-	var textStr string
-	if tool.IsQidanContentURL_Desk8(inURL) { // qidian
-		textStr = tool.Qidian_GetContent_Desk8(html)
-	} else if Page_URL_Test_deqixs(inURL) {
-		textStr = GetContent_deqixs(html, inURL, "") // 分页
-	} else if TOC_URL_Test_83zws(inURL) {
-		textStr = GetContent_83zws(html, inURL, "") // 分页
-	} else if TOC_URL_Test_xiguasuwu(inURL) {
-		textStr = GetContent_xiguasuwu(html, inURL, "") // 分页
-	} else if Page_URL_Test_92yanqing(inURL) {
-		textStr = GetContent_92yanqing(html, inURL, "") // 分页
-	} else if Page_URL_Test_uuks5(inURL) {
-		textStr = GetContent_uuks5(html)
-	} else if TOC_URL_Test_92xs(inURL) {
-		textStr = GetContent_92xs(html)
-	} else {
-		textStr = tool.GetContent(html)
+	textStr := ""
+
+	// 找到tengo脚本，传递url, html，返回jsonStr
+	nowDomain := ExtractDomain(inURL)
+	strTengo := Ext_getSiteTengo(nowDomain)
+	if "" != strTengo { // 找到domain.tengo
+		if DEBUG {
+			fmt.Println("- TOC Tengo:", nowDomain, "->", len(strTengo))
+		}
+		// in: iType, iURL, html out: oStr
+		tng := tengo.NewScript( []byte(strTengo) )
+		tng.SetImports(ExtAllMap)
+		tng.Add("iType", "page")
+		tng.Add("iURL", inURL)
+		tng.Add("html", html)
+		cc, e:= tng.Run()
+		if e != nil {
+			fmt.Println("# Error:", e)
+		}
+		textStr = cc.Get("oStr").String() // 获取返回text
+	}
+
+	// 常规内置规则
+	var nowLen int = 0
+	if "" == textStr {
+		if tool.IsQidanContentURL_Desk8(inURL) { // qidian
+			textStr = tool.Qidian_GetContent_Desk8(html)
+		} else if Page_URL_Test_deqixs(inURL) {
+			textStr = GetContent_deqixs(html, inURL, "") // 分页
+		} else if TOC_URL_Test_83zws(inURL) {
+			textStr = GetContent_83zws(html, inURL, "") // 分页
+		} else if TOC_URL_Test_xiguasuwu(inURL) {
+			textStr = GetContent_xiguasuwu(html, inURL, "") // 分页
+		} else if Page_URL_Test_92yanqing(inURL) {
+			textStr = GetContent_92yanqing(html, inURL, "") // 分页
+		} else if Page_URL_Test_uuks5(inURL) {
+			textStr = GetContent_uuks5(html)
+		} else if TOC_URL_Test_92xs(inURL) {
+			textStr = GetContent_92xs(html)
+		} else {
+			textStr = tool.GetContent(html)
+		}
 	}
 
 	if ! IsUpWriteBadContent {
@@ -247,7 +320,6 @@ func compare2GetNewPages(book *ebook.Book, toc [][]string) int { // 比较得到
 
 func getBookNewPages(book *ebook.Book) int { // 下载toc并写入新章节
 	nowBookURL := string(book.Bookurl)
-	var bc [][]string
 	html := hc.GetHTML(tool.NewFoxRequest(nowBookURL))
 	if "" == html {
 		fmt.Println("- 目录下载失败，请重试  @ ", string(book.Bookname))
@@ -256,6 +328,32 @@ func getBookNewPages(book *ebook.Book) int { // 下载toc并写入新章节
 	if DEBUG {
 		fmt.Println("- TOC URL:", nowBookURL, "->", DebugWriteFile(html))
 	}
+
+	// 找到tengo脚本，传递url, html，返回jsonStr
+	nowDomain := ExtractDomain(nowBookURL)
+	strTengo := Ext_getSiteTengo(nowDomain)
+	if "" != strTengo { // 找到domain.tengo
+		if DEBUG {
+			fmt.Println("- Page: Tengo:", nowDomain, "->", len(strTengo))
+		}
+		// in: iType, iURL, html out: oStr
+		tng := tengo.NewScript( []byte(strTengo) )
+		tng.SetImports(ExtAllMap)
+		tng.Add("iType", "toc")
+		tng.Add("iURL", nowBookURL)
+		tng.Add("html", html)
+		cc, e:= tng.Run()
+		if e != nil {
+			fmt.Println("# Error:", e)
+		}
+		sJson := cc.Get("oStr").String() // 获取返回json
+		if strings.Contains(sJson, "[") {
+			return addNewPagesFromJson(book, sJson) // 比较得到新章节
+		}
+	}
+
+	// 常规内置规则
+	var bc [][]string
 	if tool.IsQidanTOCURL_Desk8(nowBookURL) {
 		bc = tool.Qidian_GetTOC_Desk8(html)
 	} else if tool.IsQidanTOCURL_Touch8(nowBookURL) {

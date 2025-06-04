@@ -19,6 +19,9 @@ import (
 func printVersionInfo() {
 	fmt.Printf(`Version : %[2]s
 Usage   : %[1]s [args] [filePath]
+Env     :
+	DEBUG=1
+	TengoDir=/home/xx/tengo/
 Example :
 	%[1]s -ls xx.fml
 	%[1]s -ubt 0 xx.fml
