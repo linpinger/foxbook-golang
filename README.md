@@ -131,10 +131,10 @@ go build -o foxbook-golang-x86.exe -ldflags "-s -w" github.com/linpinger/foxbook
 ```golang
 fox := import("fox")
 
-html := fox.gethtml("https://xxx.com/sss/aaa").body
-
 // 返回: https://xxx.com/xxx/nnn.html
 fullURL := fox.getfullurl("/xxx/nnn.html", "https://xxx.com/aaa/bbb/")
+
+html := fox.get("https://www.xxx.com/sss/aaa", `Referer: http://www.xxx.com/`).body
 
 // post请求
 htmlpd := fox.post("http://www.xxx.com/modules/article/search.php", `searchtype=articlename&searchkey=%EE%EE%EE&t_btnsearch=%EE%B8%A8`, `Content-Type: application/x-www-form-urlencoded
