@@ -136,12 +136,18 @@ html := fox.gethtml("https://xxx.com/sss/aaa").body
 // 返回: https://xxx.com/xxx/nnn.html
 fullURL := fox.getfullurl("/xxx/nnn.html", "https://xxx.com/aaa/bbb/")
 
+// post请求
+htmlpd := fox.post("http://www.xxx.com/modules/article/search.php", `searchtype=articlename&searchkey=%EE%EE%EE&t_btnsearch=%EE%B8%A8`, `Content-Type: application/x-www-form-urlencoded
+Referer: http://www.xxx.com/
+`).body
+
 ```
 
 - tengo语法类似golang，但也有不同，建议看下它源码里面的例子 https://github.com/d5/tengo/
 
 
 **更新日志:**
+- 2025-06-05: 添加: tengo添加post方法
 - 2025-06-04: 添加: 重大修改: 引入tengo脚本以支持自定义站点规则，exe大了1.2M，但为了扩展性值得
 - 2025-05-20: 修改: 获取ip方式，添加: `DEBUG`环境变量，`DebugWriteFile(content)`，添加站点: deqixs，83zws，xiguasuwu，92yanqing，其中有多页的模板
 - 2024-08-30: 添加: 倒序清空内容字节小于3000的章节

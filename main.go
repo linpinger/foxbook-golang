@@ -2,7 +2,7 @@ package main
 
 // 全局变量
 var (
-	verStr        = "2025-06-04 public"
+	verStr        = "2025-06-05 public"
 	DEBUG         = false
 
 	listenPort    = "80"
