@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -177,32 +178,37 @@ func ExtractDomain(rawURL string) string {
 	}
 }
 
-/*
-
-func main() {
-	// script, _ := os.ReadFile(os.Args[1])
-	iURL := "https://www.xxx.com/oooo/111/"
+// ["toc", "page"], iURL, html
+func RunTengoByDomain(iType, iURL, html string) string {
+	oStr := ""
 
 	// 找到tengo脚本，传递url, html，返回jsonStr
 	nowDomain := ExtractDomain(iURL)
 	strTengo := Ext_getSiteTengo(nowDomain)
-
 	if "" != strTengo { // 找到domain.tengo
+		// in: iType, iURL, html out: oStr
 		tng := tengo.NewScript( []byte(strTengo) )
 		tng.SetImports(ExtAllMap)
 
-		tng.Add("iType", "toc")
+		tng.Add("iType", iType)
 		tng.Add("iURL", iURL)
-		tng.Add("html", "")
+		tng.Add("html", html)
 
 		cc, e:= tng.Run()
 		if e != nil {
-			fmt.Println("# Error:", e)
+			fmt.Println("# Error at Run Tengo:", e)
 		}
-		oStr := cc.Get("oStr").String()
-		fmt.Println(oStr)
+		oStr = cc.Get("oStr").String() // 获取返回text
 	}
 
+	return oStr
+}
+
+/*
+
+func main() {
+	// script, _ := os.ReadFile(os.Args[1])
+	fmt.Println( RunTengoByDomain("toc", "https://www.xxx.com/oooo/111/", "") )
 }
 
 */

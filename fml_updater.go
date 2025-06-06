@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/d5/tengo/v2"
 	"github.com/linpinger/golib/ebook"
 	"github.com/linpinger/golib/tool"
 )
@@ -17,6 +16,10 @@ import (
 var hc *tool.FoxHTTPClient
 var UPContentMaxLength int = 6000    // 正文有效最小长度
 var IsUpWriteBadContent bool = true  // 更新时是否写入无效内容 < UPContentMaxLength
+
+func init() {
+	hc = tool.NewFoxHTTPClient()
+}
 
 // Chapter 定义 JSON 对象的结构
 type Chapter struct {
@@ -66,7 +69,7 @@ func addNewPagesFromJson(book *ebook.Book, jsonStr string) int { // 比较jsonSt
 }
 
 func UpdateTOCofLenFML(fmlPath string) { // 导出函数，更新len.fml的目录
-	hc = tool.NewFoxHTTPClient()
+//	hc = tool.NewFoxHTTPClient()
 
 	shelf := ebook.NewShelf(fmlPath) // 读取
 
@@ -123,7 +126,7 @@ func Qidian_GetTOC_Touch8_Full(html string) [][]string {
 }
 
 func UpdateBookTOC(fmlPath string, bookIDX int) { // 导出函数，更新单本目录
-	hc = tool.NewFoxHTTPClient()
+//	hc = tool.NewFoxHTTPClient()
 
 	shelf := ebook.NewShelf(fmlPath) // 读取
 
@@ -134,7 +137,7 @@ func UpdateBookTOC(fmlPath string, bookIDX int) { // 导出函数，更新单本
 	shelf.Save(fmlPath)
 }
 func UpdateShelf(fmlPath string, cookiePath string) *ebook.Shelf { // 导出函数，更新shelf
-	hc = tool.NewFoxHTTPClient()
+//	hc = tool.NewFoxHTTPClient()
 
 	shelf := ebook.NewShelf(fmlPath) // 读取
 	fmlName := filepath.Base(fmlPath)
@@ -194,27 +197,8 @@ func updatePageContent(shelf *ebook.Shelf, bookIDX int, pageIDX int, fmlName str
 	if DEBUG {
 		fmt.Println("- Page URL:", inURL, "->", DebugWriteFile(html))
 	}
-	textStr := ""
 
-	// 找到tengo脚本，传递url, html，返回jsonStr
-	nowDomain := ExtractDomain(inURL)
-	strTengo := Ext_getSiteTengo(nowDomain)
-	if "" != strTengo { // 找到domain.tengo
-		if DEBUG {
-			fmt.Println("- TOC Tengo:", nowDomain, "->", len(strTengo))
-		}
-		// in: iType, iURL, html out: oStr
-		tng := tengo.NewScript( []byte(strTengo) )
-		tng.SetImports(ExtAllMap)
-		tng.Add("iType", "page")
-		tng.Add("iURL", inURL)
-		tng.Add("html", html)
-		cc, e:= tng.Run()
-		if e != nil {
-			fmt.Println("# Error:", e)
-		}
-		textStr = cc.Get("oStr").String() // 获取返回text
-	}
+	textStr := RunTengoByDomain("page", inURL, html)
 
 	// 常规内置规则
 	var nowLen int = 0
@@ -329,27 +313,9 @@ func getBookNewPages(book *ebook.Book) int { // 下载toc并写入新章节
 		fmt.Println("- TOC URL:", nowBookURL, "->", DebugWriteFile(html))
 	}
 
-	// 找到tengo脚本，传递url, html，返回jsonStr
-	nowDomain := ExtractDomain(nowBookURL)
-	strTengo := Ext_getSiteTengo(nowDomain)
-	if "" != strTengo { // 找到domain.tengo
-		if DEBUG {
-			fmt.Println("- Page: Tengo:", nowDomain, "->", len(strTengo))
-		}
-		// in: iType, iURL, html out: oStr
-		tng := tengo.NewScript( []byte(strTengo) )
-		tng.SetImports(ExtAllMap)
-		tng.Add("iType", "toc")
-		tng.Add("iURL", nowBookURL)
-		tng.Add("html", html)
-		cc, e:= tng.Run()
-		if e != nil {
-			fmt.Println("# Error:", e)
-		}
-		sJson := cc.Get("oStr").String() // 获取返回json
-		if strings.Contains(sJson, "[") {
-			return addNewPagesFromJson(book, sJson) // 比较得到新章节
-		}
+	sJson := RunTengoByDomain("toc", nowBookURL, html)
+	if strings.Contains(sJson, "[") {
+		return addNewPagesFromJson(book, sJson) // 比较得到新章节
 	}
 
 	// 常规内置规则
@@ -375,8 +341,7 @@ func getBookNewPages(book *ebook.Book) int { // 下载toc并写入新章节
 func getBookCase2GetBookIDX(shelf *ebook.Shelf, cookiePath string) []int { // 更新书架获得要更新的bookIDX列表
 	firstBookURL := string(shelf.Books[0].Bookurl)
 	siteNum := 0
-	html := ""
-	res := ""
+	html, res := "", ""
 	cookie := GetCookie(cookiePath)
 	switch true { // RE 只要获取 bookname, newpageurl 即可比较
 	case strings.Contains(firstBookURL, ".wutuxs.com"):
@@ -620,8 +585,7 @@ func GetTOC_xiguasuwu(html string) [][]string {
 }
 func GetContent_xiguasuwu(html, iURL, oldStr string) string { // 4页
 	var strB strings.Builder
-	nextURL := ""
-	nextName := ""
+	nextURL, nextName := "", ""
 	strB.WriteString(oldStr)
 	match := regexp.MustCompile("(?smi)<div id=\"booktxt\">(.*?)</div>.*?<a [^>]*linkNext[^>]* href=\"([^\"]*)\"[^>]*>([^<]*)<").FindStringSubmatch(html)
 	if len(match) == 4 {
@@ -651,8 +615,7 @@ func Page_URL_Test_92yanqing(iURL string) bool {
 }
 func GetContent_92yanqing(html, iURL, oldStr string) string {
 	var strB strings.Builder
-	nextURL := ""
-	nextName := ""
+	nextURL, nextName := "", ""
 	strB.WriteString(oldStr)
 	match := regexp.MustCompile("(?smi)<div *id=\"booktxt\">(.*?)</div>.*?<a href=\"([^\"]*)\"[^>]*next_url\">([^<]*)<").FindStringSubmatch(html)
 	if len(match) == 4 {
