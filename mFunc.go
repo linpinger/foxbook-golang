@@ -25,7 +25,6 @@ Env     :
 Example :
 	%[1]s -ls xx.fml
 	%[1]s -ubt 0 xx.fml
-	%[1]s -c "D:/cookie/file/path" FoxBook.fml
 	%[1]s -to all_xx.azw3 xx.fml
 	%[1]s -to mobi all.fml
 	%[1]s -to dir2mobi -d /dev/shm/00/
@@ -126,9 +125,6 @@ func startHTTPServer(posDirList []string) {
 
 	fullRootDir, _ := filepath.Abs(rootDir)
 	fmt.Println("# Root Dir:", rootDir, "=", fullRootDir)
-	if bOpenFB {
-		fmt.Println("# Cookie:", cookiePath)
-	}
 
 	if "" != logPath { // 在所有server前调用
 		fLog, _ := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
@@ -151,7 +147,7 @@ func startHTTPServer(posDirList []string) {
 		http.Handle("/t", NewHandlerFML2MOBI(rootDir)) // 转换目录下的fml为mobi
 	}
 	if bOpenFB {
-		http.Handle("/fb/", NewHandlerFoxBook(posDirList, cookiePath)) // 小说管理
+		http.Handle("/fb/", NewHandlerFoxBook(posDirList)) // 小说管理
 	}
 	if bOpenCGI {
 		http.HandleFunc("/foxcgi/", NewHandlerCGI) // cgi处理
@@ -172,7 +168,6 @@ func main() {
 	//	if "http" == nowExeName || "http.exe" == nowExeName { isBinNameHTTP = true }
 
 	var fmlPath string
-	flag.StringVar(&cookiePath, "c", cookiePath, "cookie file Path, if blank then not download bookcase")
 
 	// switch
 	flag.BoolVar(&bWebDAV, "w", bWebDAV, "server switch: "+webDAVPrefix+" to use WebDAV")
@@ -231,12 +226,11 @@ func main() {
 		os.Exit(0)
 	}
 
-	// 查找fml,cookie路径，考虑不存在的异常, 模式: 命令或服务器
+	// 查找fml路径，考虑不存在的异常, 模式: 命令或服务器
 	var posDirList = []string{"./", "/sdcard/FoxBook/", "/sdcard/FoxBook/fmls/", "/dev/shm/00/", "/dev/shm/x/", "/home/fox/bin/", "/root/bin/", "/home/etc/"} // 非win的路径，以后可以增加
 	if "windows" == runtime.GOOS {
 		posDirList = []string{"./", "C:/bin/sqlite/FoxBook/", "D:/bin/sqlite/FoxBook/", "T:/cache/"}
 	}
-	cookiePath = FindFileInDirList(cookiePath, posDirList)
 
 	fileCount := flag.NArg() // 处理后的参数个数，一般是文件路径
 	switch fileCount {
@@ -299,7 +293,7 @@ func main() {
 			os.Exit(0)
 		}
 
-		UpdateShelf(fmlPath, cookiePath) // 更新fml
+		UpdateShelf(fmlPath) // 更新fml
 		os.Exit(0)
 	default:
 		fmt.Fprintln(os.Stderr, "Error: cmd parse error")

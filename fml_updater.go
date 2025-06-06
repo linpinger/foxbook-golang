@@ -136,7 +136,7 @@ func UpdateBookTOC(fmlPath string, bookIDX int) { // 导出函数，更新单本
 //	shelf.SortBooksDesc() // 排序
 	shelf.Save(fmlPath)
 }
-func UpdateShelf(fmlPath string, cookiePath string) *ebook.Shelf { // 导出函数，更新shelf
+func UpdateShelf(fmlPath string) *ebook.Shelf { // 导出函数，更新shelf
 //	hc = tool.NewFoxHTTPClient()
 
 	shelf := ebook.NewShelf(fmlPath) // 读取
@@ -144,12 +144,7 @@ func UpdateShelf(fmlPath string, cookiePath string) *ebook.Shelf { // 导出函�
 
 	fmt.Println("< Start Update:", fmlName)
 	var idxs []int
-	if "" != cookiePath {
-		fmt.Println("- Cookie:", cookiePath)
-		idxs = getBookCase2GetBookIDX(shelf, cookiePath)
-	} else {
-		idxs = shelf.GetAllBookIDX() // 获取所有需更新的bookIDX
-	}
+	idxs = shelf.GetAllBookIDX() // 获取所有需更新的bookIDX
 
 	if 0 == len(idxs) {
 		fmt.Println("- BookCase Has Nothing to Update:", fmlName)
@@ -337,120 +332,6 @@ func getBookNewPages(book *ebook.Book) int { // 下载toc并写入新章节
 	}
 	return compare2GetNewPages(book, bc) // 比较得到新章节
 }
-
-func getBookCase2GetBookIDX(shelf *ebook.Shelf, cookiePath string) []int { // 更新书架获得要更新的bookIDX列表
-	firstBookURL := string(shelf.Books[0].Bookurl)
-	siteNum := 0
-	html, res := "", ""
-	cookie := GetCookie(cookiePath)
-	switch true { // RE 只要获取 bookname, newpageurl 即可比较
-	case strings.Contains(firstBookURL, ".wutuxs.com"):
-		html = hc.GetHTML(tool.NewFoxRequest("https://www.wutuxs.com/modules/article/bookcase.php").SetCookie(strings.Trim(cookie["wutuxs"], "\n\r ")))
-		res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
-		siteNum = 42
-	case strings.Contains(firstBookURL, ".meegoq.com"):
-		// 2020-04-21: add
-		html = hc.GetHTML(tool.NewFoxRequest("https://www.meegoq.com/u/").SetCookie(strings.Trim(cookie["meegoq"], "\n\r ")))
-		res = "(?smi)<li>.*?\"n\".*?<a [^>]*?>([^<]*)<.*?\"c\".*?<a href=\"([^\"]*)\""
-		siteNum = 43
-	case strings.Contains(firstBookURL, ".ymxxs.com"):
-		// 2020-04-27: 同 meegoq
-		html = hc.GetHTML(tool.NewFoxRequest("https://www.ymxxs.com/u/").SetCookie(strings.Trim(cookie["ymxxs"], "\n\r ")))
-		res = "(?smi)<li>.*?\"n\".*?<a [^>]*?>([^<]*)<.*?\"c\".*?<a href=\"([^\"]*)\""
-		siteNum = 43
-	case strings.Contains(firstBookURL, ".xsbiquge."):
-		html = hc.GetHTML(tool.NewFoxRequest("https://www.xsbiquge.com/bookcase.php").SetCookie(strings.Trim(cookie["xsbiquge"], "\n\r ")))
-		html += hc.GetHTML(tool.NewFoxRequest("https://www.xsbiquge.com/bookcase.php?page=2").SetCookie(strings.Trim(cookie["xsbiquge"], "\n\r ")))
-		html += hc.GetHTML(tool.NewFoxRequest("https://www.xsbiquge.com/bookcase.php?page=3").SetCookie(strings.Trim(cookie["xsbiquge"], "\n\r ")))
-		res = "(?smi)\"s2\"><a [^>]*?>([^<]*)<.*?\"s4\"><a href=\"([^\"]*)\""
-		siteNum = 24
-	case strings.Contains(firstBookURL, ".dajiadu8.com"):
-		// 2020-04-21: dajiadu.net -> dajiadu8.com
-		html = hc.GetHTML(tool.NewFoxRequest("https://www.dajiadu8.com/modules/article/bookcase.php").SetCookie(strings.Trim(cookie["dajiadu8"], "\n\r ")))
-		res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
-		siteNum = 40
-	case strings.Contains(firstBookURL, ".xqqxs."): // 同 dajiadu
-		html = hc.GetHTML(tool.NewFoxRequest("https://www.xqqxs.com/modules/article/bookcase.php?delid=604").SetCookie(strings.Trim(cookie["xqqxs"], "\n\r ")))
-		res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*cid=([0-9]*)\""
-		siteNum = 17
-	case strings.Contains(firstBookURL, ".13xxs."):
-		html = hc.GetHTML(tool.NewFoxRequest("http://www.13xxs.com/modules/article/bookcase.php?classid=0").SetCookie(strings.Trim(cookie["13xxs"], "\n\r ")))
-		res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"[^\"]*?/([0-9]*.html)\""
-		siteNum = 13
-		/*
-			case strings.Contains(firstBookURL, ".biquge.com") :
-				html = html2utf8( gethtml( "http://www.biquge.com.tw/modules/article/bookcase.php", strings.Trim( cookie["rawbiquge"], "\n\r " ) ), "http://www.biquge.com.tw/modules/article/bookcase.php")
-				res = "(?smi)<tr>.*?<a [^>]*?>([^<]*)<.*?<a href=\"([^\"]*)\""
-				siteNum = 20
-		*/
-	default: // 不支持的书架，例如qidian
-		return shelf.GetAllBookIDX() // 获取所有需更新的bookIDX
-	}
-
-	lks := regexp.MustCompile(res).FindAllStringSubmatch(html, -1)
-	if nil == lks {
-		return shelf.GetAllBookIDX() // 获取所有需更新的bookIDX
-	}
-
-	var idxs []int
-	var bInBookCase bool
-	nowBookAllPageStr := ""
-	newpageurl := ""
-	for i, book := range shelf.Books {
-		if string(book.Statu) == "1" {
-			continue
-		}
-		bInBookCase = false
-		for _, lk := range lks {
-			if lk[1] == string(book.Bookname) { // 找到书名
-				bInBookCase = true
-				newpageurl = lk[2]
-				switch siteNum {
-				case 40:
-					newpageurl += ".html"
-				case 42:
-					newpageurl += ".html"
-				case 17:
-					newpageurl += ".html"
-				}
-				nowBookAllPageStr = shelf.Books[i].GetBookAllPageStr()
-				if !strings.Contains(nowBookAllPageStr, newpageurl+"|") { // newpageurl 不在本地列表中
-					idxs = append(idxs, i)
-				}
-				break
-			}
-		}
-		if !bInBookCase {
-			idxs = append(idxs, i)
-		}
-	}
-	return idxs
-}
-
-func GetCookie(cookiePath string) map[string]string {
-	cookie := make(map[string]string)
-	ckbs, _ := tool.ReadFile(cookiePath)
-	cks := regexp.MustCompile("(?smi)<cookies>(.*)</cookies>").FindSubmatch(ckbs)
-	sss := regexp.MustCompile("(?smi)<([a-z0-9]*)>(.*?)</[^>]*>").FindAllSubmatch(cks[1], -1)
-	for _, xx := range sss {
-		if string(xx[1]) == "cookies" {
-			continue
-		}
-		cookie[string(xx[1])] = string(xx[2])
-	}
-	return cookie
-}
-
-// func cookie2Field(cookieStr string) string {
-// 	var oStr string
-// 	for _, ss := range strings.Split(cookieStr, "\n") {
-// 		if strings.Contains(ss, "\t") {
-// 			ff := strings.Split(ss, "\t")
-// 			oStr += ff[5] + "=" + ff[6] + "; "
-// 		}
-// 	}
-// 	return oStr
-// }
 
 // { site: 2023-09-15, 2023-11-23:add 92xs.info
 func TOC_URL_Test_92xs(iURL string) bool {

@@ -18,12 +18,11 @@ import (
 type HandlerFoxBook struct {
 	shelfPath  string
 	shelf      *ebook.Shelf
-	cookiePath string
 	posDirList []string
 }
 
-func NewHandlerFoxBook(posibleDirList []string, cookieFilePath string) http.Handler {
-	fbh := &HandlerFoxBook{shelfPath: "./FoxBook.fml", cookiePath: cookieFilePath, posDirList: GetUniqDirList(posibleDirList)}
+func NewHandlerFoxBook(posibleDirList []string) http.Handler {
+	fbh := &HandlerFoxBook{shelfPath: "./FoxBook.fml", posDirList: GetUniqDirList(posibleDirList)}
 
 	if tool.FileExist(fbh.shelfPath) {
 		fbh.shelf = ebook.NewShelf(fbh.shelfPath)
@@ -144,7 +143,7 @@ func (fbh *HandlerFoxBook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fbh.shelf = ebook.NewShelf(fbh.shelfPath)
 		http.Redirect(w, r, rPath, http.StatusMovedPermanently)
 	case "fups": // 更新
-		UpdateShelf(fbh.shelfPath, fbh.cookiePath)
+		UpdateShelf(fbh.shelfPath)
 		fbh.shelf = ebook.NewShelf(fbh.shelfPath)
 		http.Redirect(w, r, rPath, http.StatusMovedPermanently)
 	case "fupt": // 更新单本目录
@@ -268,7 +267,7 @@ func FindExtInDir(sExt string, dirName string) []string {
 /*
 func main() {
 
-	http.Handle("/fb/", NewHandlerFoxBook([]string{`.`, `T:\x`}, `T:\x\FoxBook.cookie`))
+	http.Handle("/fb/", NewHandlerFoxBook([]string{`.`, `T:\x`}))
 	err := http.ListenAndServe("127.0.0.1:8081", nil)
 	if err != nil {
 		fmt.Println("ListenAndServe: ", err)

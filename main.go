@@ -9,7 +9,6 @@ var (
 	rootDir       = "."
 	logPath       = ""
 	userAgentStr  = ""
-	cookiePath    = "FoxBook.cookie"
 
 	bOpenUpload   = true
 	bOpenFML2Mobi = false
