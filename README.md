@@ -134,12 +134,12 @@ fox := import("fox")
 // 返回: https://xxx.com/xxx/nnn.html
 fullURL := fox.getfullurl("/xxx/nnn.html", "https://xxx.com/aaa/bbb/")
 
-html := fox.get("https://www.xxx.com/sss/aaa", `Referer: http://www.xxx.com/`).body
+html := fox.get("https://www.xxx.com/sss/aaa", `Referer: http://www.xxx.com/`)
 
 // post请求
 htmlpd := fox.post("http://www.xxx.com/modules/article/search.php", `searchtype=articlename&searchkey=%EE%EE%EE&t_btnsearch=%EE%B8%A8`, `Content-Type: application/x-www-form-urlencoded
 Referer: http://www.xxx.com/
-`).body
+`)
 
 ```
 
@@ -147,6 +147,7 @@ Referer: http://www.xxx.com/
 
 
 **更新日志:**
+- 2025-06-06: 修改: 直接返回字符串，而不是之前的map，分离出将head字符串处理为map的方法
 - 2025-06-05: 添加: tengo添加post方法
 - 2025-06-04: 添加: 重大修改: 引入tengo脚本以支持自定义站点规则，exe大了1.2M，但为了扩展性值得
 - 2025-05-20: 修改: 获取ip方式，添加: `DEBUG`环境变量，`DebugWriteFile(content)`，添加站点: deqixs，83zws，xiguasuwu，92yanqing，其中有多页的模板

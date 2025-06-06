@@ -29,11 +29,30 @@ func init() {
 	TengoDir = os.Getenv("TengoDir")
 }
 
+func HeaderStr2Map(headrStr string) map[string]string {
+	oMap := make(map[string]string)
+	if ! strings.Contains(headrStr, ":") {
+		return oMap
+	}
+	// 按行拆分 http头
+	scanner := bufio.NewScanner(strings.NewReader(headrStr))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 {
+			oMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+		}
+	}
+
+	return oMap
+}
 
 func doPost(args ...tengo.Object) (tengo.Object, error) {
 	nowURL, _ := tengo.ToString(args[0])
-	postData := ""
-	reqHeader := ""
+	postData, reqHeader := "", ""
 
 	nArgs := len(args)
 	if nArgs > 1 {
@@ -45,26 +64,13 @@ func doPost(args ...tengo.Object) (tengo.Object, error) {
 
 	req := tool.NewFoxRequestPOST(nowURL, strings.NewReader(postData))
 
-	if reqHeader != "" {
-		// 按行拆分 http头
-		scanner := bufio.NewScanner(strings.NewReader(reqHeader))
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if line == "" {
-				continue
-			}
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				req.SetHead(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
-			}
-		}
+	for k, v := range HeaderStr2Map(reqHeader) {
+		req.SetHead(k, v)
 	}
 
 	html := hc.GetHTML(req)
 
-	return &tengo.Map{Value: map[string]tengo.Object{
-		"body": &tengo.String{Value: html},
-	}}, nil
+	return &tengo.String{Value: html}, nil
 }
 
 
@@ -76,30 +82,20 @@ func doGetHTML(args ...tengo.Object) (tengo.Object, error) {
 		reqHeader, _ = tengo.ToString(args[1])
 	}
 
-
 	req := tool.NewFoxRequest(nowURL)
 
-	if reqHeader != "" {
-		// 按行拆分 http头
-		scanner := bufio.NewScanner(strings.NewReader(reqHeader))
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if line == "" {
-				continue
-			}
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				req.SetHead(strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
-			}
-		}
+	for k, v := range HeaderStr2Map(reqHeader) {
+		req.SetHead(k, v)
 	}
 
 	html := hc.GetHTML(req)
 
-	return &tengo.Map{Value: map[string]tengo.Object{
-		"body": &tengo.String{Value: html},
-	}}, nil
+	return &tengo.String{Value: html}, nil
 }
+
+//	return &tengo.Map{Value: map[string]tengo.Object{
+//		"body": &tengo.String{Value: html},
+//	}}, nil
 
 func doGetFullURL(args ...tengo.Object) (tengo.Object, error) {
 	pageURL, _ := tengo.ToString(args[0])
@@ -107,9 +103,7 @@ func doGetFullURL(args ...tengo.Object) (tengo.Object, error) {
 
 	oURL := tool.GetFullURL(pageURL, bookURL)
 
-	return &tengo.Map{Value: map[string]tengo.Object{
-		"url": &tengo.String{Value: oURL},
-	}}, nil
+	return &tengo.String{Value: oURL}, nil
 }
 
 // 变量及函数
@@ -222,14 +216,14 @@ fmt := import("fmt")
 
 // in: iType=["toc", "page"], iURL, html out: oStr
 
-fmt.println( fox.getfullurl("333.html", "http://www.xxx.com/111/222/").url )
+fmt.println( fox.getfullurl("333.html", "http://www.xxx.com/111/222/") )
 
-html := fox.get("https://www.xxx.com/161/p-2.html").body
+html := fox.get("https://www.xxx.com/161/p-2.html")
 fmt.println(html)
 
 htmlpd := fox.post("http://www.xxx.com/modules/article/search.php", `searchtype=articlename&searchkey=%EE%EE%EE&t_btnsearch=%EE%B8%A8`, `Content-Type: application/x-www-form-urlencoded
 Referer: http://www.xxx.com/
-`).body
+`)
 fmt.println(htmlpd)
 
 */
