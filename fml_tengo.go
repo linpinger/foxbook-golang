@@ -204,10 +204,21 @@ func RunTengoByDomain(iType, iURL, html string) string {
 	return oStr
 }
 
+func RunTengoScript(scriptPath string) {
+	bytesTengo, _ := os.ReadFile(scriptPath)
+	tng := tengo.NewScript( bytesTengo )
+	tng.SetImports(ExtAllMap)
+	_, e:= tng.Run()
+	if e != nil {
+		fmt.Println("# Error at Run Tengo:", e)
+	}
+}
+
+
 /*
 
 func main() {
-	// script, _ := os.ReadFile(os.Args[1])
+	// RunTengoScript(os.Args[1])
 	fmt.Println( RunTengoByDomain("toc", "https://www.xxx.com/oooo/111/", "") )
 }
 

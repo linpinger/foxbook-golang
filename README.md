@@ -147,6 +147,7 @@ Referer: http://www.xxx.com/
 
 
 **更新日志:**
+- 2025-06-13: 添加: RunTengoScript 方便调试tengo脚本，用法: fb.exe xxx.tengo
 - 2025-06-06: 修改: 移除cookie及书架功能
 - 2025-06-06: 修改: 直接返回字符串，而不是之前的map，分离出将head字符串处理为map的方法
 - 2025-06-05: 添加: tengo添加post方法

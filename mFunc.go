@@ -24,7 +24,9 @@ Env     :
 	TengoDir=/home/xx/tengo/
 Example :
 	%[1]s -ls xx.fml
+	%[1]s -uwbc=false xx.fml
 	%[1]s -ubt 0 xx.fml
+	%[1]s -dc 6000 xx.fml
 	%[1]s -to all_xx.azw3 xx.fml
 	%[1]s -to mobi all.fml
 	%[1]s -to dir2mobi -d /dev/shm/00/
@@ -32,6 +34,8 @@ Example :
 	%[1]s -p 8080 -U "FoxBook" -d "D:/http/root/dir/path/"
 	%[1]s -gu http://127.0.0.1/f [-U uastr] [fileName.path]
 	%[1]s -pu http://127.0.0.1/f fileToPost.path
+
+	%[1]s xxx.com.tengo
 `, os.Args[0], verStr)
 }
 
@@ -246,7 +250,17 @@ func main() {
 			os.Exit(0)
 		}
 
-		fmlPath = mapFmlName(flag.Arg(0))
+		onePath := flag.Arg(0) // 一个文件路径
+		oneExt  := strings.ToLower(filepath.Ext(onePath)) // 获取文件扩展名
+
+		// tengo脚本
+		if oneExt == ".tengo" {
+			RunTengoScript( onePath )
+			os.Exit(0)
+		}
+
+		// fml文件
+		fmlPath = mapFmlName(onePath)
 		fmlPath = FindFileInDirList(fmlPath, posDirList)
 		if "" == fmlPath {
 			fmt.Fprintln(os.Stderr, "- Error: 文件不存在:", flag.Arg(0))
