@@ -132,8 +132,24 @@ func UpdateBookTOC(fmlPath string, bookIDX int) { // 导出函数，更新单本
 
 	fmt.Println("+ New Chapter Count :", getBookNewPages(&shelf.Books[bookIDX]))
 
-	shelf.SortBooksAsc() // 排序
+//	shelf.SortBooksAsc() // 排序
 //	shelf.SortBooksDesc() // 排序
+	shelf.Save(fmlPath)
+}
+func UpdateBookBlankPages(fmlPath string, bookIDX int) { // 导出函数，更新单本所有空章节
+	shelf := ebook.NewShelf(fmlPath) // 读取
+	fmlName := filepath.Base(fmlPath)
+	blankPages := shelf.GetBookBlankPages(bookIDX, UPContentMaxLength) // ret: []PageLoc
+	// 根据 blankPages 更新所有空白章节，并写入结构
+	var wgp sync.WaitGroup
+	for _, pl := range blankPages {
+		wgp.Add(1)
+		go func(shelf *ebook.Shelf, bookIDX int, pageIDX int, fmlName string) {
+			defer wgp.Done()
+			updatePageContent(shelf, bookIDX, pageIDX, fmlName) // 下载内容页并写入结构
+		}(shelf, pl.BookIDX, pl.PageIDX, fmlName)
+	}
+	wgp.Wait()
 	shelf.Save(fmlPath)
 }
 func UpdateShelf(fmlPath string) *ebook.Shelf { // 导出函数，更新shelf

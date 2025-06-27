@@ -190,6 +190,8 @@ func main() {
 	flag.StringVar(&ebookSavePath, "to", "", "ebook: mobi/epub/azw3 save path or dir2mobi or dir2azw3 or dir2epub")
 	var upBookIDX int
 	flag.IntVar(&upBookIDX, "ubt", -1, "ebook: update book's TOC")
+	var upBookIDXBlankPages int
+	flag.IntVar(&upBookIDXBlankPages, "ubp", -1, "ebook: update book's blank pages")
 	var bUpTOCofLenFML bool
 	flag.BoolVar(&bUpTOCofLenFML, "uqd", false, "ebook: update TOC of len.fml")
 	var bListShelf bool
@@ -284,6 +286,10 @@ func main() {
 			os.Exit(0)
 		}
 
+		if -1 != upBookIDXBlankPages { // 更新某书空章节
+			UpdateBookBlankPages(fmlPath, upBookIDXBlankPages)
+			os.Exit(0)
+		}
 		if -1 != upBookIDX { // 更新某书目录
 			UpdateBookTOC(fmlPath, upBookIDX)
 			os.Exit(0)
@@ -310,6 +316,15 @@ func main() {
 		UpdateShelf(fmlPath) // 更新fml
 		os.Exit(0)
 	default:
+		onePath := flag.Arg(0) // 一个文件路径
+		oneExt  := strings.ToLower(filepath.Ext(onePath)) // 获取文件扩展名
+
+		// tengo脚本
+		if oneExt == ".tengo" {
+			RunTengoScript( onePath )
+			os.Exit(0)
+		}
+
 		fmt.Fprintln(os.Stderr, "Error: cmd parse error")
 		os.Exit(1)
 	}
