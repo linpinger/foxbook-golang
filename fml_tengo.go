@@ -189,6 +189,8 @@ func RunTengoByDomain(iType, iURL, html string) string {
 		// in: iType, iURL, html out: oStr
 		tng := tengo.NewScript( []byte(strTengo) )
 		tng.SetImports(ExtAllMap)
+		tng.SetImportDir(TengoDir)
+		tng.EnableFileImport(true)
 
 		tng.Add("iType", iType)
 		tng.Add("iURL", iURL)
@@ -208,6 +210,8 @@ func RunTengoScript(scriptPath string) {
 	bytesTengo, _ := os.ReadFile(scriptPath)
 	tng := tengo.NewScript( bytesTengo )
 	tng.SetImports(ExtAllMap)
+	tng.SetImportDir(TengoDir)
+	tng.EnableFileImport(true)
 	_, e:= tng.Run()
 	if e != nil {
 		fmt.Println("# Error at Run Tengo:", e)

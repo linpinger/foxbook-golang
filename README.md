@@ -147,6 +147,7 @@ Referer: http://www.xxx.com/
 
 
 **更新日志:**
+- 2025-07-01: 添加: tengo允许自定义本地import，并设置目录为TengoDir
 - 2025-06-27: 添加: ubp参数用来更新单本书空白章节，扩展fb xxx.tengo arg1 arg2，在tengo脚本中可以使用os.args()获取
 - 2025-06-13: 添加: RunTengoScript 方便调试tengo脚本，用法: fb.exe xxx.tengo
 - 2025-06-06: 修改: 移除cookie及书架功能
